@@ -33,13 +33,14 @@ class _QRScanScreenState extends State<QRScanScreen>
   bool _isFlashOn = false;
   DateTime? _lastScanTime;
   String? _cameraError;
+  bool _isControllerInitialized = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initAnimation();
-    _checkCameraAvailability();
+    _checkCameraPermission();
   }
 
   @override
@@ -65,110 +66,20 @@ class _QRScanScreenState extends State<QRScanScreen>
     );
   }
 
-  Future<void> _checkCameraAvailability() async {
+
+  Future<void> _initializeCameraController() async {
+    if (_isControllerInitialized) return;
+    
     try {
-      // Primero verificar permisos
-      await _checkCameraPermission();
-
-      if (_hasCameraPermission) {
-        // Luego verificar si hay cámara disponible
-        await _checkCameraHardware();
-      }
-    } catch (error) {
-      if (mounted) {
-        setState(() {
-          _cameraError = error.toString();
-          _hasCameraHardware = false;
-          _isCheckingPermission = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _checkCameraHardware() async {
-    // Liberar recursos de la cámara si ya existe un controlador
-    final controller = _scannerController;
-    if (controller != null) {
-      try {
-        await controller.stop();
-        await controller.dispose();
-      } catch (e) {
-        debugPrint('Error al liberar recursos de la cámara: $e');
-      }
-    }
-
-    try {
-      // Inicializar el controlador con configuración mínima inicial
+      // Create controller without starting it
       _scannerController = MobileScannerController(
         detectionSpeed: DetectionSpeed.normal,
         facing: CameraFacing.back,
         torchEnabled: false,
       );
-
-      // Función para verificar si la cámara está lista
-      Future<bool> isCameraReady() async {
-        try {
-          final controller = _scannerController;
-          if (controller == null) return false;
-          // Intentar acceder a una propiedad del controlador
-          await controller.toggleTorch();
-          await controller.toggleTorch();
-          return true;
-        } catch (e) {
-          debugPrint('Error verificando cámara: $e');
-          return false;
-        }
-      }
-
-      // Intentar con la cámara trasera primero
-      bool cameraReady = false;
       
-      try {
-        final controller = _scannerController;
-        if (controller != null) {
-          await controller.start();
-          // Esperar un momento para que la cámara se inicialice
-          await Future.delayed(const Duration(milliseconds: 800));
-          cameraReady = await isCameraReady();
-        }
-      } catch (e) {
-        debugPrint('Error con cámara trasera: $e');
-      }
-
-      // Si falla, intentar con la cámara frontal
-      if (!cameraReady && mounted) {
-        setState(() {
-          _cameraError = 'Probando con cámara frontal...';
-        });
-        
-        try {
-          final controller = _scannerController;
-          if (controller != null) {
-            await controller.stop();
-            await controller.dispose();
-          }
-          
-          _scannerController = MobileScannerController(
-            detectionSpeed: DetectionSpeed.normal,
-            facing: CameraFacing.front,
-            torchEnabled: false,
-          );
-          
-          final newController = _scannerController;
-          if (newController != null) {
-            await newController.start();
-            await Future.delayed(const Duration(milliseconds: 800));
-            cameraReady = await isCameraReady();
-          }
-        } catch (e) {
-          debugPrint('Error con cámara frontal: $e');
-        }
-      }
-
-      if (!cameraReady) {
-        throw Exception('No se pudo inicializar ninguna cámara');
-      }
-
+      _isControllerInitialized = true;
+      
       if (mounted) {
         setState(() {
           _hasCameraHardware = true;
@@ -177,12 +88,11 @@ class _QRScanScreenState extends State<QRScanScreen>
         });
       }
     } catch (error) {
-      debugPrint('Error initializing camera: $error');
+      debugPrint('Error creating camera controller: $error');
       if (mounted) {
         setState(() {
           _hasCameraHardware = false;
-          _cameraError =
-              'No se pudo acceder a la cámara. Asegúrate de que la aplicación tenga los permisos necesarios.';
+          _cameraError = 'Error al inicializar la cámara: $error';
           _isCheckingPermission = false;
         });
         _showNoCameraDialog();
@@ -198,6 +108,8 @@ class _QRScanScreenState extends State<QRScanScreen>
         setState(() {
           _hasCameraPermission = true;
         });
+        // Initialize camera controller when permissions are available
+        await _initializeCameraController();
       }
       return;
     }
@@ -214,6 +126,9 @@ class _QRScanScreenState extends State<QRScanScreen>
           });
           _showPermissionDeniedDialog();
           return;
+        } else {
+          // Initialize camera controller when permission is granted
+          await _initializeCameraController();
         }
       }
       return;
@@ -251,6 +166,9 @@ class _QRScanScreenState extends State<QRScanScreen>
           _isCheckingPermission = false;
         });
         _showPermissionDeniedDialog();
+      } else {
+        // Initialize camera controller when permission is granted
+        await _initializeCameraController();
       }
     }
   }
@@ -327,7 +245,7 @@ class _QRScanScreenState extends State<QRScanScreen>
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              _checkCameraAvailability();
+              _checkCameraPermission();
             },
             style: TextButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
@@ -404,7 +322,7 @@ class _QRScanScreenState extends State<QRScanScreen>
       setState(() {
         _hasCameraPermission = true;
       });
-      await _checkCameraHardware();
+      await _initializeCameraController();
     } else if (!status.isGranted && _hasCameraPermission) {
       setState(() {
         _hasCameraPermission = false;
@@ -957,7 +875,7 @@ class _QRScanScreenState extends State<QRScanScreen>
                         Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: _checkCameraAvailability,
+                            onTap: _checkCameraPermission,
                             borderRadius: BorderRadius.circular(12),
                             highlightColor: Colors.transparent,
                             splashColor: Colors.transparent,
@@ -1120,7 +1038,7 @@ class _QRScanScreenState extends State<QRScanScreen>
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
-                            onPressed: _checkCameraAvailability,
+                            onPressed: _checkCameraPermission,
                             icon: const Icon(LucideIcons.refreshCw),
                             label: const Text('Verificar Nuevamente'),
                             style: ElevatedButton.styleFrom(
