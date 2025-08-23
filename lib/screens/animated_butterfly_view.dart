@@ -68,7 +68,7 @@ class _AnimatedButterflyViewState extends State<AnimatedButterflyView> {
 
   void _open3DViewer() {
     // Verificar si la mariposa tiene modelo 3D
-    final modelPath = widget.butterfly.modelAsset ?? 'assets/models/test.glb';
+    final modelPath = widget.butterfly.modelAsset ?? 'assets/models/cube.glb';
     
     Navigator.of(context).push(
       MaterialPageRoute(

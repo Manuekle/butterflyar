@@ -20,7 +20,7 @@ El mensaje `"ModelViewer initializing... <http://127.0.0.1:41965/>"` que ves es 
     ↓
 🖥️ Servidor HTTP local (127.0.0.1:41965)
     ↓
-📦 Assets locales (test.glb)
+📦 Assets locales (cube.glb)
 ```
 
 ### ¿Es seguro?
@@ -46,13 +46,13 @@ El mensaje `"ModelViewer initializing... <http://127.0.0.1:41965/>"` que ves es 
 flutter:
   assets:
     - assets/models/           # ✅ Directorio completo
-    - assets/models/test.glb  # ✅ O archivo específico
+    - assets/models/cube.glb  # ✅ O archivo específico
 ```
 
 ### Uso básico
 ```dart
 ModelViewer(
-  src: 'assets/models/test.glb',  // ✅ Asset local
+  src: 'assets/models/cube.glb',  // ✅ Asset local
   backgroundColor: const Color(0xFF000000),
   cameraControls: true,
   autoRotate: true,
@@ -71,7 +71,7 @@ ModelViewer(
 ### ✅ Lo que SÍ debes hacer
 ```dart
 ModelViewer(
-  src: 'assets/models/test.glb',     // ✅ Asset local
+  src: 'assets/models/cube.glb',     // ✅ Asset local
   environmentImage: null,                 // ✅ Sin imagen remota
   loading: Loading.eager,                 // ✅ Carga rápida
   debugLogging: false,                    // ✅ Sin logs en producción
@@ -83,7 +83,7 @@ ModelViewer(
 ```dart
 ModelViewer(
   // 🎯 CORE - Asset local
-  src: 'assets/models/test.glb',
+  src: 'assets/models/cube.glb',
   
   // 🎨 VISUAL - Sin dependencias externas
   backgroundColor: const Color(0xFF000000),
@@ -109,9 +109,9 @@ ModelViewer(
 ### Problema: "No carga el modelo"
 ```dart
 // ✅ Solución: Verifica la ruta
-'assets/models/test.glb'  // Correcto
-'assets/models/test.glb'  // ❌ Mayúscula
-'/assets/models/test.glb' // ❌ Slash inicial
+'assets/models/cube.glb'  // Correcto
+'assets/models/cube.glb'  // ❌ Mayúscula
+'/assets/models/cube.glb' // ❌ Slash inicial
 ```
 
 ### Problema: "WebView error"
@@ -135,9 +135,9 @@ ModelViewer(
 ```
 assets/
 ├── models/
-│   ├── test.glb        # Modelo principal
+│   ├── cube.glb        # Modelo principal
 │   ├── butterfly_low.glb    # Versión low-poly
-│   └── test.glb            # Modelo de prueba
+│   └── cube.glb            # Modelo de prueba
 ```
 
 ### 🎯 Widget optimizado
@@ -166,7 +166,7 @@ class OptimizedModelViewer extends StatelessWidget {
 void precacheModel(BuildContext context) {
   // Precarga el asset para mejorar rendimiento
   precacheImage(
-    AssetImage('assets/models/test.glb'), 
+    AssetImage('assets/models/cube.glb'), 
     context
   );
 }
