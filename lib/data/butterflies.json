@@ -1,0 +1,31 @@
+{
+  "butterflies": [
+    {
+      "id": "azulreal",
+      "name": "Azul Real",
+      "scientificName": "Apatura iris",
+      "description": "El Azul Real es una mariposa europea conocida por el brillo iridiscente de las alas del macho.",
+      "imageAsset": "assets/images/azulreal.jpg",
+      "modelAsset": "assets/models/butterfly.glb",
+      "ambientSound": "assets/sounds/test.mp3"
+    },
+    {
+      "id": "monarca",
+      "name": "Mariposa Monarca",
+      "scientificName": "Danaus plexippus",
+      "description": "Conocida por su migración masiva y su patrón de colores naranja y negro.",
+      "imageAsset": "assets/images/monarca.jpg",
+      "modelAsset": "assets/models/butterfly.glb",
+      "ambientSound": "assets/sounds/test.mp3"
+    },
+    {
+      "id": "morpho",
+      "name": "Morpho Azul",
+      "scientificName": "Morpho menelaus",
+      "description": "Famosa por su color azul metálico brillante en el dorso de las alas.",
+      "imageAsset": "assets/images/morpho.jpg",
+      "modelAsset": "assets/models/butterfly.glb",
+      "ambientSound": "assets/sounds/test.mp3"
+    }
+  ]
+}
