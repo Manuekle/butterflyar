@@ -15,8 +15,8 @@ import 'package:arkit_plugin/arkit_plugin.dart'
     if (dart.library.html) 'package:flutter/foundation.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 
-import 'package:butterfliesar/models/butterfly.dart';
-import 'package:butterfliesar/utils/ar_helpers.dart';
+import 'package:butterflyar/models/butterfly.dart';
+import 'package:butterflyar/utils/ar_helpers.dart';
 
 class ARExperienceScreen extends StatefulWidget {
   final Butterfly butterfly;

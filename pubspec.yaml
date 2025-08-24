@@ -1,6 +1,6 @@
-name: butterfliesar
+name: butterflyar
 description: "Aplicación Flutter multiplataforma (Android & iOS) para explorar mariposas en Realidad Aumentada."
-publish_to: 'none'
+publish_to: "none"
 
 version: 1.0.0+1
 
@@ -44,7 +44,6 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

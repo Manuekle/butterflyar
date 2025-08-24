@@ -3,7 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
-import 'package:butterfliesar/theme/theme_provider.dart';
+import 'package:butterflyar/theme/theme_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});

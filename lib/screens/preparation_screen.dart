@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
-import 'package:butterfliesar/models/butterfly.dart';
-import 'package:butterfliesar/providers/butterfly_provider.dart';
+import 'package:butterflyar/models/butterfly.dart';
+import 'package:butterflyar/providers/butterfly_provider.dart';
 
 class PreparationScreen extends StatefulWidget {
   const PreparationScreen({super.key});

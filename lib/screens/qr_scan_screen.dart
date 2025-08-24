@@ -7,9 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:butterfliesar/models/butterfly_loader.dart';
-import 'package:butterfliesar/models/butterfly.dart';
-import 'package:butterfliesar/screens/animated_butterfly_view.dart';
+import 'package:butterflyar/models/butterfly_loader.dart';
+import 'package:butterflyar/models/butterfly.dart';
+import 'package:butterflyar/screens/animated_butterfly_view.dart';
 
 class QRScanScreen extends StatefulWidget {
   const QRScanScreen({super.key});

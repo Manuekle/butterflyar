@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'ar_experience_screen.dart';
 import 'butterfly_static_screen.dart';
-import 'package:butterfliesar/models/butterfly.dart';
-import 'package:butterfliesar/utils/ar_helpers.dart'
+import 'package:butterflyar/models/butterfly.dart';
+import 'package:butterflyar/utils/ar_helpers.dart'
     show SimpleARSupport, ARPlatformSupport;
 import 'package:vibration/vibration.dart';
-import 'package:butterfliesar/widgets/animated_toast.dart';
+import 'package:butterflyar/widgets/animated_toast.dart';
 
 /// Widget que alterna suavemente entre AR y modo estático con fade+slide.
 class AnimatedButterflyView extends StatefulWidget {

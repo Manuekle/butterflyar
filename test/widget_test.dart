@@ -2,7 +2,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:butterfliesar/main.dart';
+import 'package:butterflyar/main.dart';
 
 void main() {
   testWidgets('App loads correctly smoke test', (WidgetTester tester) async {
@@ -11,7 +11,10 @@ void main() {
 
     // Verify that our app title is displayed.
     expect(find.text('Butterfly AR'), findsOneWidget);
-    expect(find.text('Explora mariposas en Realidad Aumentada'), findsOneWidget);
+    expect(
+      find.text('Explora mariposas en Realidad Aumentada'),
+      findsOneWidget,
+    );
 
     // Verify that main action buttons are present.
     expect(find.text('Escanear QR'), findsOneWidget);
