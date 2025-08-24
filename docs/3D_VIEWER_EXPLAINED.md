@@ -20,7 +20,7 @@ El mensaje `"ModelViewer initializing... <http://127.0.0.1:41965/>"` que ves es 
     ↓
 🖥️ Servidor HTTP local (127.0.0.1:41965)
     ↓
-📦 Assets locales (cube.glb)
+📦 Assets locales (buttefly.glb)
 ```
 
 ### ¿Es seguro?
@@ -42,17 +42,19 @@ El mensaje `"ModelViewer initializing... <http://127.0.0.1:41965/>"` que ves es 
 ## Configuración para Offline 100%
 
 ### Assets en pubspec.yaml
+
 ```yaml
 flutter:
   assets:
-    - assets/models/           # ✅ Directorio completo
-    - assets/models/cube.glb  # ✅ O archivo específico
+    - assets/models/ # ✅ Directorio completo
+    - assets/models/butterfly.glb # ✅ O archivo específico
 ```
 
 ### Uso básico
+
 ```dart
 ModelViewer(
-  src: 'assets/models/cube.glb',  // ✅ Asset local
+  src: 'assets/models/butterfly.glb',  // ✅ Asset local
   backgroundColor: const Color(0xFF000000),
   cameraControls: true,
   autoRotate: true,
@@ -61,6 +63,7 @@ ModelViewer(
 ```
 
 ### ❌ Lo que NO debes hacer
+
 ```dart
 ModelViewer(
   src: 'https://ejemplo.com/modelo.glb',  // ❌ URL externa
@@ -69,9 +72,10 @@ ModelViewer(
 ```
 
 ### ✅ Lo que SÍ debes hacer
+
 ```dart
 ModelViewer(
-  src: 'assets/models/cube.glb',     // ✅ Asset local
+  src: 'assets/models/butterfly.glb',     // ✅ Asset local
   environmentImage: null,                 // ✅ Sin imagen remota
   loading: Loading.eager,                 // ✅ Carga rápida
   debugLogging: false,                    // ✅ Sin logs en producción
@@ -83,22 +87,22 @@ ModelViewer(
 ```dart
 ModelViewer(
   // 🎯 CORE - Asset local
-  src: 'assets/models/cube.glb',
-  
+  src: 'assets/models/butterfly.glb',
+
   // 🎨 VISUAL - Sin dependencias externas
   backgroundColor: const Color(0xFF000000),
   environmentImage: null,  // Sin HDR remoto
   poster: null,           // Sin imagen de poster
-  
+
   // ⚡ PERFORMANCE - Carga optimizada
   loading: Loading.eager,
   autoPlay: true,
-  
+
   // 🎮 INTERACCIÓN - Controles táctiles
   cameraControls: true,
   autoRotate: true,
   disableZoom: false,
-  
+
   // 🔧 DEBUG - Solo en desarrollo
   debugLogging: kDebugMode,
 )
@@ -107,14 +111,16 @@ ModelViewer(
 ## Resolución de problemas
 
 ### Problema: "No carga el modelo"
+
 ```dart
 // ✅ Solución: Verifica la ruta
-'assets/models/cube.glb'  // Correcto
-'assets/models/cube.glb'  // ❌ Mayúscula
-'/assets/models/cube.glb' // ❌ Slash inicial
+'assets/models/butterfly.glb'  // Correcto
+'assets/models/butterfly.glb'  // ❌ Mayúscula
+'/assets/models/butterfly.glb' // ❌ Slash inicial
 ```
 
 ### Problema: "WebView error"
+
 ```dart
 // ✅ Solución: Agrega permisos de internet
 // android/app/src/main/AndroidManifest.xml
@@ -122,6 +128,7 @@ ModelViewer(
 ```
 
 ### Problema: "Modelo muy lento"
+
 ```dart
 // ✅ Solución: Optimiza el modelo
 // - Reduce polígonos
@@ -132,19 +139,21 @@ ModelViewer(
 ## Mejores prácticas
 
 ### 📦 Estructura de assets
+
 ```
 assets/
 ├── models/
-│   ├── cube.glb        # Modelo principal
+│   ├── butterfly.glb        # Modelo principal
 │   ├── butterfly_low.glb    # Versión low-poly
-│   └── cube.glb            # Modelo de prueba
+│   └── butterfly.glb            # Modelo de prueba
 ```
 
 ### 🎯 Widget optimizado
+
 ```dart
 class OptimizedModelViewer extends StatelessWidget {
   final String modelPath;
-  
+
   @override
   Widget build(BuildContext context) {
     return ModelViewer(
@@ -162,11 +171,12 @@ class OptimizedModelViewer extends StatelessWidget {
 ```
 
 ### ⚡ Precarga de modelos
+
 ```dart
 void precacheModel(BuildContext context) {
   // Precarga el asset para mejorar rendimiento
   precacheImage(
-    AssetImage('assets/models/cube.glb'), 
+    AssetImage('assets/models/butterfly.glb'),
     context
   );
 }

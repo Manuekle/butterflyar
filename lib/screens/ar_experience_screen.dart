@@ -2,17 +2,19 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
 
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+
+// Imports condicionales para AR - Solo ARKit, sin ARCore
+import 'package:arkit_plugin/arkit_plugin.dart'
+    if (dart.library.html) 'package:flutter/foundation.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 
-// AR imports
-import 'package:arkit_plugin/arkit_plugin.dart';
 import 'package:butterfliesar/models/butterfly.dart';
 import 'package:butterfliesar/utils/ar_helpers.dart';
 
@@ -26,27 +28,30 @@ class ARExperienceScreen extends StatefulWidget {
 
 class _ARExperienceScreenState extends State<ARExperienceScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  // Audio and animations
+  // Audio y animaciones
   AudioPlayer? _audioPlayer;
   late AnimationController _slideController;
+  late Animation<Offset> _slide;
 
-  // AR Controller for iOS
+  // Controller AR solo para iOS
   ARKitController? _arkitController;
 
-  // App states
-  ARPlatformSupport _arSupport = ARPlatformSupport.modelViewer;
+  // Estados de la aplicación
+  ARPlatformSupport _arSupport = ARPlatformSupport.none;
   bool _hasCameraPermission = false;
   bool _isARMode = true;
+  bool _isDayBackground = true;
   bool _isModelSelected = false;
+  bool _showingInfo = false;
   bool _isModelLoaded = false;
 
-  // Animation and model control variables
+  // Variables para animaciones y control del modelo
   Timer? _rotationTimer;
   Timer? _floatingTimer;
   double _modelRotation = 0.0;
   double _floatingOffset = 0.0;
 
-  // AR node reference
+  // Referencias a nodos AR
   String? _currentARNodeName;
 
   late final Butterfly selectedButterfly = widget.butterfly;
@@ -59,8 +64,14 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
     _slideController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
-    )..forward();
+    );
 
+    _slide = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutQuart),
+        );
+
+    _slideController.forward();
     _initializeApp();
   }
 
@@ -71,14 +82,11 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
     await _checkCameraPermission();
     _playAmbientSound();
 
-    // Usar AR solo en iOS, Model Viewer en Android
+    // AR solo disponible en iOS con ARKit
     if (Platform.isIOS &&
         _arSupport == ARPlatformSupport.arkit &&
         _hasCameraPermission) {
-      ARLogger.success('Dispositivo iOS listo para ARKit');
-    } else if (Platform.isAndroid) {
-      ARLogger.success('Usando Model Viewer en Android');
-      setState(() => _isARMode = false);
+      ARLogger.success('Dispositivo iOS listo para AR');
     } else {
       ARLogger.log('Usando modo vista previa 3D');
       setState(() => _isARMode = false);
@@ -143,8 +151,7 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
       if (Platform.isIOS && _arSupport == ARPlatformSupport.arkit) {
         await _loadARKitModel(modelPath);
       } else {
-        // For Android or fallback, we'll use ModelViewer which is handled in the build method
-        ARLogger.log('Usando ModelViewer para visualización 3D');
+        ARLogger.log('Cargando modelo en modo preview 3D');
       }
 
       setState(() => _isModelLoaded = true);
@@ -163,7 +170,7 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
       final config = ARModelConfig.butterfly;
       final nodeName = 'butterfly_${DateTime.now().millisecondsSinceEpoch}';
 
-      // Create node using ARKit's basic API
+      // Crear nodo usando la API básica de ARKit
       final node = ARKitReferenceNode(
         url: modelPath,
         scale: vector.Vector3.all(config.scale),
@@ -215,12 +222,9 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
     if (_currentARNodeName == null) return;
 
     try {
-      switch (_arSupport) {
-        case ARPlatformSupport.arkit:
-          // ARKit maneja rotación de forma diferente
-          break;
-        default:
-          break;
+      if (_arSupport == ARPlatformSupport.arkit) {
+        // ARKit maneja rotación de forma diferente
+        // La rotación automática se maneja en el ModelViewer para otros casos
       }
     } catch (e) {
       ARLogger.error('Error actualizando rotación del modelo', e);
@@ -228,31 +232,18 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
   }
 
   void _updateModelFloating() {
+    // Implementar animación de flotación según la plataforma
     if (_currentARNodeName == null) return;
 
-    // Calculate floating offset and apply to model position
     final floatingY = math.sin(_floatingOffset) * 0.05;
-
-    // TODO: Apply floatingY to the model's position based on platform
-    // This is a placeholder for future implementation
-    debugPrint('Floating offset: $floatingY');
+    // Actualizar posición Y del modelo según plataforma
   }
 
   // ==================== USER INTERACTIONS ====================
 
-  // This method is kept for future implementation of tap interactions
-  // Currently not used in the UI but preserved for future features
-  @visibleForTesting
-  @protected
-  void handleTapForTesting() {
-    if (!mounted) return;
+  void _handleTap() {
     setState(() => _isModelSelected = !_isModelSelected);
-    try {
-      // Haptic feedback is only available on physical devices
-      HapticFeedback.lightImpact();
-    } catch (e) {
-      ARLogger.log('Haptic feedback not available: $e');
-    }
+    HapticFeedback.lightImpact();
 
     if (_isModelSelected) {
       _stopAutoAnimations();
@@ -263,7 +254,6 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
   }
 
   void _showSelectionFeedback() {
-    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text(
@@ -272,36 +262,31 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
         ),
         duration: const Duration(seconds: 2),
         backgroundColor: Theme.of(context).colorScheme.primary,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
-  // This method is kept for future implementation of screen capture functionality
-  // Currently not used in the UI but preserved for future features
-  @visibleForTesting
-  @protected
-  Future<void> captureScreenForTesting() async {
+  Future<void> _captureScreen() async {
     try {
-      if (!mounted) return;
+      HapticFeedback.lightImpact();
 
-      // This is a placeholder for actual screen capture implementation
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(LucideIcons.camera, color: Colors.white),
-                const SizedBox(width: 8),
-                Text(
-                  'Captura ${_arSupport != ARPlatformSupport.none ? 'AR' : '3D'} simulada',
-                ),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
+      // Aquí podrías implementar captura real según la plataforma
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(LucideIcons.camera, color: Colors.white),
+              SizedBox(width: 8),
+              Text(
+                'Captura ${_arSupport == ARPlatformSupport.arkit ? 'AR' : '3D'} simulada',
+              ),
+            ],
           ),
-        );
-      }
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
     } catch (e) {
       ARLogger.error('Error capturando pantalla', e);
     }
@@ -318,114 +303,605 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
     );
   }
 
-  // ==================== BUILD METHOD ====================
+  // ==================== AR VIEW BUILDERS ====================
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Main content
-          if (_arSupport == ARPlatformSupport.arkit && _isARMode)
-            _buildARKitView()
-          else
-            _buildModelViewer(),
-
-          // Back button
-          Positioned(
-            top: 40,
-            left: 16,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ),
-
-          // AR/3D toggle
-          if (_arSupport == ARPlatformSupport.arkit)
-            Positioned(
-              top: 40,
-              right: 16,
-              child: IconButton(
-                icon: Icon(
-                  _isARMode ? LucideIcons.box : LucideIcons.move3d,
-                  color: Colors.white,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _isARMode = !_isARMode;
-                  });
-                },
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // ==================== AR VIEWS ====================
-
-  Widget _buildARKitView() {
+  Widget _buildARView() {
     if (!_hasCameraPermission) {
       return _buildNoPermissionView();
     }
 
+    if (Platform.isIOS && _arSupport == ARPlatformSupport.arkit) {
+      return _buildARKitView();
+    } else {
+      return _buildModelViewerView();
+    }
+  }
+
+  Widget _buildARKitView() {
     return ARKitSceneView(
-      onARKitViewCreated: (ARKitController controller) {
+      onARKitViewCreated: (controller) {
         _arkitController = controller;
+        ARLogger.success('Vista ARKit creada');
         _loadARModel();
       },
-      enableTapRecognizer: true,
-      enablePanRecognizer: true,
-      enablePinchRecognizer: true,
-      enableRotationRecognizer: true,
       showFeaturePoints: true,
+      showWorldOrigin: false,
+      enableTapRecognizer: true,
     );
   }
 
-  Widget _buildModelViewer() {
+  Widget _buildModelViewerView() {
     final modelPath = selectedButterfly.modelAsset;
 
     if (modelPath == null) {
-      return const Center(child: Text('No hay modelo 3D disponible'));
+      return _buildStaticView();
     }
 
     return ModelViewer(
       backgroundColor: Colors.transparent,
       src: modelPath,
-      alt: 'Modelo 3D de ${selectedButterfly.name}',
+      alt: "Modelo 3D de ${selectedButterfly.name}",
       ar: false,
       autoRotate: true,
       cameraControls: true,
       autoPlay: true,
       loading: Loading.eager,
+      disableZoom: false,
+      minCameraOrbit: "auto auto 1m",
+      maxCameraOrbit: "auto auto 20m",
+      cameraOrbit: "0deg 75deg 5m",
+      fieldOfView: "30deg",
+      minFieldOfView: "15deg",
+      maxFieldOfView: "60deg",
+    );
+  }
+
+  Widget _buildStaticView() {
+    return Container(
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage(
+            _isDayBackground
+                ? 'assets/backgrounds/day.png'
+                : 'assets/backgrounds/night.png',
+          ),
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Mostrar modelo 3D si está disponible
+                if (selectedButterfly.modelAsset != null)
+                  Expanded(
+                    child: ModelViewer(
+                      backgroundColor: Colors.transparent,
+                      src: selectedButterfly.modelAsset!,
+                      alt: "Modelo 3D de ${selectedButterfly.name}",
+                      ar: false,
+                      autoRotate: true,
+                      cameraControls: true,
+                      autoPlay: true,
+                      loading: Loading.eager,
+                      disableZoom: false,
+                      minCameraOrbit: "auto auto 1m",
+                      maxCameraOrbit: "auto auto 20m",
+                      cameraOrbit: "0deg 75deg 5m",
+                      fieldOfView: "30deg",
+                      minFieldOfView: "15deg",
+                      maxFieldOfView: "60deg",
+                    ),
+                  )
+                else
+                  Column(
+                    children: [
+                      Icon(
+                        _arSupport == ARPlatformSupport.none
+                            ? Icons.phone_android
+                            : LucideIcons.box,
+                        size: 64,
+                        color: Colors.white,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        _arSupport == ARPlatformSupport.none
+                            ? 'Vista previa 3D'
+                            : 'Modelo 3D',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        _arSupport == ARPlatformSupport.arkit
+                            ? 'Toca el botón AR para realidad aumentada'
+                            : 'AR no soportado en este dispositivo',
+                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+          _buildStaticViewControls(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStaticViewControls() {
+    return Positioned(
+      bottom: 24,
+      right: 24,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildFloatingButton(
+            icon: LucideIcons.info,
+            onPressed: _showInfo,
+            tooltip: 'Información',
+          ),
+          SizedBox(height: 16),
+          _buildFloatingButton(
+            icon: _isDayBackground ? LucideIcons.sun : LucideIcons.moon,
+            onPressed: () {
+              setState(() => _isDayBackground = !_isDayBackground);
+              HapticFeedback.lightImpact();
+            },
+            tooltip: _isDayBackground ? 'Modo noche' : 'Modo día',
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildNoPermissionView() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
+      child: Container(
+        margin: EdgeInsets.all(24),
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.videocam_off, size: 64, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text(
-              'Se requiere permiso de cámara',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Icon(LucideIcons.camera, size: 48, color: Colors.white),
+            SizedBox(height: 20),
+            Text(
+              'Permiso de cámara requerido',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Por favor, otorga permiso de cámara para usar la realidad aumentada.',
+            SizedBox(height: 12),
+            Text(
+              'Se necesita acceso a la cámara para la experiencia AR.',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () => openAppSettings(),
-              child: const Text('Abrir configuración'),
+              onPressed: () async {
+                final status = await Permission.camera.request();
+                if (status.isGranted) {
+                  setState(() => _hasCameraPermission = true);
+                  _loadARModel();
+                } else if (status.isPermanentlyDenied) {
+                  await openAppSettings();
+                }
+              },
+              child: Text('Conceder permiso'),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==================== UI COMPONENTS ====================
+
+  Widget _buildFloatingButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    required String tooltip,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onPressed,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 4,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: Colors.black87, size: 22),
+        ),
+      ),
+    );
+  }
+
+  void _showInfo() {
+    setState(() => _showingInfo = true);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildInfoSheet(),
+    ).then((_) => setState(() => _showingInfo = false));
+  }
+
+  Widget _buildInfoSheet() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: BoxDecoration(
+        color: isDark ? Color(0xFF1E2936) : Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 16,
+            offset: Offset(0, -4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Center(
+            child: Container(
+              margin: EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white24 : Colors.black26,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          // Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header con imagen y nombres
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          image: DecorationImage(
+                            image: AssetImage(selectedButterfly.imageAsset),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              selectedButterfly.name,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              selectedButterfly.scientificName,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 24),
+
+                  // Descripción
+                  Text(
+                    'Descripción',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    selectedButterfly.description,
+                    style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
+                  ),
+                  SizedBox(height: 24),
+
+                  // Info técnica AR
+                  FutureBuilder<String>(
+                    future: SimpleARSupport.getARSupportInfo(),
+                    builder: (context, snapshot) {
+                      return Container(
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: theme.colorScheme.primary.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  _arSupport == ARPlatformSupport.arkit
+                                      ? LucideIcons.smartphone
+                                      : LucideIcons.box,
+                                  color: theme.colorScheme.primary,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Estado AR',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              snapshot.data ?? 'Verificando...',
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                            if (_arSupport == ARPlatformSupport.arkit) ...[
+                              SizedBox(height: 8),
+                              Text(
+                                'Toca la mariposa para seleccionarla y usar gestos',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== MAIN BUILD ====================
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _handleTap,
+      child: Scaffold(
+        extendBodyBehindAppBar: false,
+        body: Stack(
+          children: [
+            // Main AR/3D Content
+            SafeArea(
+              child:
+                  Platform.isIOS &&
+                      _arSupport == ARPlatformSupport.arkit &&
+                      _isARMode
+                  ? _buildARView()
+                  : _buildStaticView(),
+            ),
+
+            // Top Navigation Controls
+            Positioned(
+              top: 16,
+              left: 8,
+              child: IconButton(
+                icon: Icon(
+                  LucideIcons.chevronLeft,
+                  color: Colors.white,
+                  size: 22,
+                ),
+                onPressed: () => Navigator.pop(context),
+                tooltip: 'Atrás',
+              ),
+            ),
+
+            // AR Mode Toggle (solo si AR está soportado en iOS)
+            if (Platform.isIOS && _arSupport == ARPlatformSupport.arkit)
+              Positioned(
+                top: 16,
+                right: 8,
+                child: _buildFloatingButton(
+                  icon: _isARMode ? LucideIcons.image : LucideIcons.box,
+                  onPressed: () {
+                    setState(() => _isARMode = !_isARMode);
+                    HapticFeedback.selectionClick();
+                    ARLogger.log(
+                      'Cambiado a modo: ${_isARMode ? 'AR' : '3D Preview'}',
+                    );
+                  },
+                  tooltip: _isARMode ? 'Vista previa' : 'Vista AR',
+                ),
+              ),
+
+            // AR Controls (floating buttons)
+            if (Platform.isIOS &&
+                _arSupport == ARPlatformSupport.arkit &&
+                _isARMode)
+              Positioned(
+                bottom: 24,
+                right: 24,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildFloatingButton(
+                      icon: LucideIcons.info,
+                      onPressed: _showInfo,
+                      tooltip: 'Información',
+                    ),
+                    SizedBox(height: 16),
+                    _buildFloatingButton(
+                      icon: LucideIcons.camera,
+                      onPressed: _captureScreen,
+                      tooltip: 'Capturar',
+                    ),
+                  ],
+                ),
+              ),
+
+            // Loading Indicator for AR
+            if (Platform.isIOS &&
+                _arSupport == ARPlatformSupport.arkit &&
+                _isARMode &&
+                !_isModelLoaded)
+              Positioned(
+                bottom: 100,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: SlideTransition(
+                    position: _slide,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      margin: EdgeInsets.symmetric(horizontal: 24),
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surface.withOpacity(0.92),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 20,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              LucideIcons.smartphone,
+                              size: 24,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            'Busca una superficie plana',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            'Mueve tu dispositivo lentamente',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: Colors.grey[600]),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 12),
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // Model Selection Indicator
+            if (_isModelSelected &&
+                Platform.isIOS &&
+                _arSupport == ARPlatformSupport.arkit &&
+                _isARMode)
+              Positioned(
+                top: 80,
+                left: 16,
+                right: 16,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(LucideIcons.hand, color: Colors.white, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Mariposa seleccionada - Interactúa con gestos',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -435,9 +911,23 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
   // ==================== LIFECYCLE ====================
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!mounted) return;
+  void dispose() {
+    ARLogger.log('Cerrando experiencia AR');
 
+    _stopAutoAnimations();
+    _audioPlayer?.stop();
+    _audioPlayer?.dispose();
+    _slideController.dispose();
+
+    // Cleanup AR controllers
+    _arkitController?.dispose();
+
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.resumed:
         ARLogger.log('App resumed - rechecking permissions');
@@ -467,19 +957,9 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Restart audio if needed when dependencies change
+    // Reiniciar audio si es necesario cuando cambian las dependencias
     if (mounted && (_audioPlayer?.state != PlayerState.playing)) {
       _playAmbientSound();
     }
-  }
-
-  @override
-  void dispose() {
-    _stopAutoAnimations();
-    _slideController.dispose();
-    _audioPlayer?.dispose();
-    _arkitController?.dispose();
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
   }
 }
