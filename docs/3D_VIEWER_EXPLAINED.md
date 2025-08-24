@@ -143,8 +143,6 @@ ModelViewer(
 ```
 assets/
 ├── models/
-│   ├── butterfly.glb        # Modelo principal
-│   ├── butterfly_low.glb    # Versión low-poly
 │   └── butterfly.glb            # Modelo de prueba
 ```
 
