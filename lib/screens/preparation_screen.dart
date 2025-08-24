@@ -130,49 +130,39 @@ class _PreparationScreenState extends State<PreparationScreen>
           child: Column(
             children: [
               const Spacer(),
-
               // Imagen de la mariposa
               ScaleTransition(
                 scale: _scaleAnimation,
-                child: AnimatedBuilder(
-                  animation: _pulseAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _pulseAnimation.value,
-                      child: Container(
-                        width: 140,
-                        height: 140,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              theme.colorScheme.primary.withOpacity(0.1),
-                              theme.colorScheme.primary.withOpacity(0.05),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: theme.colorScheme.primary.withOpacity(0.2),
-                            width: 2,
-                          ),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(22),
-                          child:
-                              selectedButterfly?.imageAsset.isNotEmpty == true
-                              ? Image.asset(
-                                  selectedButterfly!.imageAsset,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return _buildPlaceholderIcon(theme);
-                                  },
-                                )
-                              : _buildPlaceholderIcon(theme),
-                        ),
-                      ),
-                    );
-                  },
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        theme.colorScheme.primary.withOpacity(0.1),
+                        theme.colorScheme.primary.withOpacity(0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: selectedButterfly?.imageAsset.isNotEmpty == true
+                        ? Image.asset(
+                            selectedButterfly!.imageAsset,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return _buildPlaceholderIcon(theme);
+                            },
+                          )
+                        : _buildPlaceholderIcon(theme),
+                  ),
                 ),
               ),
 
