@@ -349,8 +349,8 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
       disableZoom: false,
       minCameraOrbit: "auto auto 1m",
       maxCameraOrbit: "auto auto 20m",
-      cameraOrbit: "0deg 75deg 5m",
-      fieldOfView: "30deg",
+      cameraOrbit: "0deg 75deg 6m",
+      fieldOfView: "25deg",
       minFieldOfView: "15deg",
       maxFieldOfView: "60deg",
     );
@@ -389,8 +389,8 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
                       disableZoom: false,
                       minCameraOrbit: "auto auto 1m",
                       maxCameraOrbit: "auto auto 20m",
-                      cameraOrbit: "0deg 75deg 5m",
-                      fieldOfView: "30deg",
+                      cameraOrbit: "0deg 75deg 6m",
+                      fieldOfView: "25deg",
                       minFieldOfView: "15deg",
                       maxFieldOfView: "60deg",
                     ),
@@ -714,22 +714,19 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
     return GestureDetector(
       onTap: _handleTap,
       child: Scaffold(
-        extendBodyBehindAppBar: false,
+        extendBodyBehindAppBar: true,
+        extendBody: true,
+        backgroundColor: Colors.transparent,
         body: Stack(
           children: [
             // Main AR/3D Content
-            SafeArea(
-              child:
-                  Platform.isIOS &&
-                      _arSupport == ARPlatformSupport.arkit &&
-                      _isARMode
-                  ? _buildARView()
-                  : _buildStaticView(),
-            ),
+            Platform.isIOS && _arSupport == ARPlatformSupport.arkit && _isARMode
+                ? _buildARView()
+                : _buildStaticView(),
 
             // Top Navigation Controls
             Positioned(
-              top: 16,
+              top: MediaQuery.of(context).padding.top + 16,
               left: 8,
               child: IconButton(
                 icon: Icon(
@@ -745,7 +742,7 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
             // AR Mode Toggle (solo si AR está soportado en iOS)
             if (Platform.isIOS && _arSupport == ARPlatformSupport.arkit)
               Positioned(
-                top: 16,
+                top: MediaQuery.of(context).padding.top + 16,
                 right: 8,
                 child: _buildFloatingButton(
                   icon: _isARMode ? LucideIcons.image : LucideIcons.box,
@@ -869,7 +866,7 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
                 _arSupport == ARPlatformSupport.arkit &&
                 _isARMode)
               Positioned(
-                top: 80,
+                top: MediaQuery.of(context).padding.top + 80,
                 left: 16,
                 right: 16,
                 child: Container(
