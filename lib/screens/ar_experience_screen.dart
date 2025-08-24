@@ -15,7 +15,6 @@ import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:arkit_plugin/arkit_plugin.dart';
 import 'package:butterfliesar/models/butterfly.dart';
 import 'package:butterfliesar/utils/ar_helpers.dart';
-import 'package:butterfliesar/widgets/safe_model_viewer.dart';
 
 class ARExperienceScreen extends StatefulWidget {
   final Butterfly butterfly;
@@ -323,13 +322,11 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
 
   @override
   Widget build(BuildContext context) {
-    final bool showARButton = _arSupport == ARPlatformSupport.arkit && _hasCameraPermission;
-    
     return Scaffold(
       body: Stack(
         children: [
-          // Main content - Use SafeModelViewer as fallback when AR is not available
-          if (_arSupport == ARPlatformSupport.arkit && _isARMode && _hasCameraPermission)
+          // Main content
+          if (_arSupport == ARPlatformSupport.arkit && _isARMode)
             _buildARKitView()
           else
             _buildModelViewer(),
@@ -338,71 +335,27 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
           Positioned(
             top: 40,
             left: 16,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
             ),
           ),
 
-          // AR/3D toggle - Only show if AR is available and we have camera permission
-          if (showARButton)
+          // AR/3D toggle
+          if (_arSupport == ARPlatformSupport.arkit)
             Positioned(
               top: 40,
               right: 16,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(24),
+              child: IconButton(
+                icon: Icon(
+                  _isARMode ? LucideIcons.box : LucideIcons.move3d,
+                  color: Colors.white,
                 ),
-                child: IconButton(
-                  icon: Icon(
-                    _isARMode ? LucideIcons.box : LucideIcons.move3d,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                  tooltip: _isARMode ? 'Ver en 3D' : 'Ver en AR',
-                  onPressed: () {
-                    setState(() {
-                      _isARMode = !_isARMode;
-                    });
-                  },
-                ),
-              ),
-            ),
-            
-          // Info message when in fallback mode
-          if (!_hasCameraPermission || _arSupport != ARPlatformSupport.arkit)
-            Positioned(
-              bottom: 24,
-              left: 16,
-              right: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.black87,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.shade400),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline, color: Colors.blue, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _hasCameraPermission 
-                          ? 'Vista previa 3D del modelo' 
-                          : 'Se requiere permiso de cámara para la experiencia AR',
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
+                onPressed: () {
+                  setState(() {
+                    _isARMode = !_isARMode;
+                  });
+                },
               ),
             ),
         ],
@@ -431,14 +384,21 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
   }
 
   Widget _buildModelViewer() {
-    final modelPath = selectedButterfly.modelAsset ?? 'assets/models/butterfly.glb';
+    final modelPath = selectedButterfly.modelAsset;
 
-    return SafeModelViewer(
-      modelAssetPath: modelPath,
-      title: '3D ${selectedButterfly.name}',
+    if (modelPath == null) {
+      return const Center(child: Text('No hay modelo 3D disponible'));
+    }
+
+    return ModelViewer(
+      backgroundColor: Colors.transparent,
+      src: modelPath,
+      alt: 'Modelo 3D de ${selectedButterfly.name}',
+      ar: false,
       autoRotate: true,
       cameraControls: true,
-      backgroundColor: const Color(0xFF1a1a2e),
+      autoPlay: true,
+      loading: Loading.eager,
     );
   }
 
