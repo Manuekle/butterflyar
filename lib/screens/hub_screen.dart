@@ -260,6 +260,7 @@ class _HubScreenState extends State<HubScreen>
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: Colors.white.withValues(alpha: 0.9),
                   height: 1.5,
+                  fontSize: 12,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -326,7 +327,10 @@ class _HubScreenState extends State<HubScreen>
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        height: 1.4,
+                        fontSize: 10,
+                      ),
                     ),
                   ],
                 ),

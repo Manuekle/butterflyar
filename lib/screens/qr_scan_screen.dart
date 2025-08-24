@@ -679,7 +679,7 @@ class _QRScanScreenState extends State<QRScanScreen>
         IconButton(
           onPressed: _toggleFlash,
           icon: Icon(
-            _isFlashOn ? LucideIcons.flashlight : LucideIcons.flashlightOff,
+            _isFlashOn ? LucideIcons.zap : LucideIcons.zapOff,
             color: Colors.white,
           ),
         ),
@@ -708,15 +708,15 @@ class _QRScanScreenState extends State<QRScanScreen>
                   width: 2,
                 ),
               ),
-              child: Stack(
-                children: [
-                  // Esquinas minimalistas
-                  _buildMinimalCorners(),
+              //child: Stack(
+              //children: [
+              // Esquinas minimalistas
+              // _buildMinimalCorners(),
 
-                  // Línea de escaneo sutil
-                  if (_isScanning) _buildMinimalScanLine(),
-                ],
-              ),
+              // Línea de escaneo sutil
+              // if (_isScanning) _buildMinimalScanLine(),
+              //],
+              //),
             ),
           );
         },
@@ -724,63 +724,63 @@ class _QRScanScreenState extends State<QRScanScreen>
     );
   }
 
-  Widget _buildMinimalCorners() {
-    return Stack(
-      children: [
-        // Esquina superior izquierda
-        const Positioned(
-          top: -1,
-          left: -1,
-          child: _CornerWidget(isTopLeft: true),
-        ),
-        // Esquina superior derecha
-        const Positioned(
-          top: -1,
-          right: -1,
-          child: _CornerWidget(isTopRight: true),
-        ),
-        // Esquina inferior izquierda
-        const Positioned(
-          bottom: -1,
-          left: -1,
-          child: _CornerWidget(isBottomLeft: true),
-        ),
-        // Esquina inferior derecha
-        const Positioned(
-          bottom: -1,
-          right: -1,
-          child: _CornerWidget(isBottomRight: true),
-        ),
-      ],
-    );
-  }
+  // Widget _buildMinimalCorners() {
+  //   return Stack(
+  //     children: [
+  //       // Esquina superior izquierda
+  //       const Positioned(
+  //         top: -1,
+  //         left: -1,
+  //         child: _CornerWidget(isTopLeft: true),
+  //       ),
+  //       // Esquina superior derecha
+  //       const Positioned(
+  //         top: -1,
+  //         right: -1,
+  //         child: _CornerWidget(isTopRight: true),
+  //       ),
+  //       // Esquina inferior izquierda
+  //       const Positioned(
+  //         bottom: -1,
+  //         left: -1,
+  //         child: _CornerWidget(isBottomLeft: true),
+  //       ),
+  //       // Esquina inferior derecha
+  //       const Positioned(
+  //         bottom: -1,
+  //         right: -1,
+  //         child: _CornerWidget(isBottomRight: true),
+  //       ),
+  //     ],
+  //   );
+  // }
 
-  Widget _buildMinimalScanLine() {
-    return AnimatedBuilder(
-      animation: _scanLineAnimation,
-      builder: (context, child) {
-        final progress = sin(_scanLineAnimation.value * 2 * pi) * 0.5 + 0.5;
+  // Widget _buildMinimalScanLine() {
+  //   return AnimatedBuilder(
+  //     animation: _scanLineAnimation,
+  //     builder: (context, child) {
+  //       final progress = sin(_scanLineAnimation.value * 2 * pi) * 0.5 + 0.5;
 
-        return Positioned(
-          left: 16,
-          right: 16,
-          top: 16 + (208 * progress),
-          child: Container(
-            height: 2,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Colors.transparent, Colors.white, Colors.transparent],
-              ),
-              borderRadius: BorderRadius.circular(1),
-              boxShadow: [
-                BoxShadow(color: Colors.white.withOpacity(0.3), blurRadius: 4),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+  //       return Positioned(
+  //         left: 16,
+  //         right: 16,
+  //         top: 16 + (208 * progress),
+  //         child: Container(
+  //           height: 2,
+  //           decoration: BoxDecoration(
+  //             gradient: const LinearGradient(
+  //               colors: [Colors.transparent, Colors.white, Colors.transparent],
+  //             ),
+  //             borderRadius: BorderRadius.circular(1),
+  //             boxShadow: [
+  //               BoxShadow(color: Colors.white.withOpacity(0.3), blurRadius: 4),
+  //             ],
+  //           ),
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
 
   Widget _buildSimpleInstruction() {
     return Positioned(
@@ -792,7 +792,7 @@ class _QRScanScreenState extends State<QRScanScreen>
           _isScanning ? 'Escanea el código QR' : 'Procesando...',
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 18,
+            fontSize: 14,
             fontWeight: FontWeight.w300,
           ),
         ),
@@ -845,7 +845,7 @@ class _QRScanScreenState extends State<QRScanScreen>
               'Buscando...',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 18,
+                fontSize: 14,
                 fontWeight: FontWeight.w300,
               ),
             ),

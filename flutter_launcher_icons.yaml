@@ -1,0 +1,12 @@
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path_android: "assets/icon/favicon-light.png"
+  image_path_ios: "assets/icon/favicon-light.png"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/icon/favicon-light.png"
+  android_adaptive_icon_background_color: "#ffffff"
+  android_adaptive_icon_foreground: "assets/icon/favicon-light.png"
+  android_adaptive_icon_monochrome: "assets/icon/favicon-dark.png"
+  remove_alpha_ios: true
+  min_sdk_android: 21
