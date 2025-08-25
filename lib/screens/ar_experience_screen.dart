@@ -107,10 +107,57 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
   }
 
   Future<void> _checkCameraPermission() async {
-    final status = await Permission.camera.status;
-    setState(() => _hasCameraPermission = status.isGranted);
-    ARLogger.log(
-      'Permisos de cámara: ${status.isGranted ? 'concedidos' : 'denegados'}',
+    try {
+      // Check current status
+      var status = await Permission.camera.status;
+      
+      // If not granted, request permission
+      if (!status.isGranted) {
+        status = await Permission.camera.request();
+      }
+      
+      // Update state and log
+      setState(() => _hasCameraPermission = status.isGranted);
+      ARLogger.log(
+        'Estado de permisos de cámara: ${status.toString().split('.').last}',
+      );
+      
+      // If permission is permanently denied, show settings dialog
+      if (status.isPermanentlyDenied) {
+        if (mounted) {
+          _showPermissionSettingsDialog();
+        }
+      }
+    } catch (e) {
+      ARLogger.error('Error verificando permisos de cámara', e);
+      setState(() => _hasCameraPermission = false);
+    }
+  }
+  
+  void _showPermissionSettingsDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Permiso de Cámara Requerido'),
+        content: const Text(
+          'Para usar la función de RA, necesitamos acceso a la cámara. ' 
+          'Por favor, habilita el permiso en la configuración de la aplicación.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              openAppSettings();
+            },
+            child: const Text('Abrir Configuración'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -464,8 +511,8 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
   Widget _buildNoPermissionView() {
     return Center(
       child: Container(
-        margin: EdgeInsets.all(24),
-        padding: EdgeInsets.all(20),
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.7),
           borderRadius: BorderRadius.circular(16),
@@ -473,35 +520,62 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(LucideIcons.camera, size: 48, color: Colors.white),
-            SizedBox(height: 20),
-            Text(
+            const Icon(LucideIcons.camera, size: 48, color: Colors.white),
+            const SizedBox(height: 20),
+            const Text(
               'Permiso de cámara requerido',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
-              textAlign: TextAlign.center,
             ),
-            SizedBox(height: 12),
-            Text(
-              'Se necesita acceso a la cámara para la experiencia AR.',
+            const SizedBox(height: 10),
+            const Text(
+              'Necesitamos acceso a tu cámara para mostrar la experiencia de realidad aumentada.',
               style: TextStyle(color: Colors.white70, fontSize: 14),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
-                final status = await Permission.camera.request();
-                if (status.isGranted) {
-                  setState(() => _hasCameraPermission = true);
-                  _loadARModel();
-                } else if (status.isPermanentlyDenied) {
-                  await openAppSettings();
+            const SizedBox(height: 20),
+            FutureBuilder<PermissionStatus>(
+              future: Permission.camera.status,
+              builder: (context, snapshot) {
+                final status = snapshot.data;
+                
+                if (status == null || status.isGranted) {
+                  return const SizedBox.shrink();
                 }
+                
+                return Column(
+                  children: [
+                    if (status.isPermanentlyDenied) ...[
+                      const Text(
+                        'El permiso fue denegado permanentemente. Por favor, habilítalo manualmente en la configuración del dispositivo.',
+                        style: TextStyle(color: Colors.orange, fontSize: 12),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.settings, size: 20),
+                        label: const Text('Abrir Configuración'),
+                        onPressed: () => openAppSettings(),
+                      ),
+                    ] else ...[
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.camera_alt, size: 20),
+                        label: const Text('Conceder Permiso'),
+                        onPressed: () async {
+                          final newStatus = await Permission.camera.request();
+                          if (newStatus.isGranted && mounted) {
+                            setState(() => _hasCameraPermission = true);
+                            _loadARModel();
+                          }
+                        },
+                      ),
+                    ],
+                  ],
+                );
               },
-              child: Text('Conceder permiso'),
             ),
           ],
         ),
