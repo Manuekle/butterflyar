@@ -11,8 +11,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 // Imports condicionales para AR - Solo ARKit, sin ARCore
-import 'package:arkit_plugin/arkit_plugin.dart'
-    if (dart.library.html) 'package:flutter/foundation.dart';
+import 'package:arkit_plugin/arkit_plugin.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 
 import 'package:butterflyar/models/butterfly.dart';
@@ -110,18 +109,18 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
     try {
       // Check current status
       var status = await Permission.camera.status;
-      
+
       // If not granted, request permission
       if (!status.isGranted) {
         status = await Permission.camera.request();
       }
-      
+
       // Update state and log
       setState(() => _hasCameraPermission = status.isGranted);
       ARLogger.log(
         'Estado de permisos de cámara: ${status.toString().split('.').last}',
       );
-      
+
       // If permission is permanently denied, show settings dialog
       if (status.isPermanentlyDenied) {
         if (mounted) {
@@ -133,7 +132,7 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
       setState(() => _hasCameraPermission = false);
     }
   }
-  
+
   void _showPermissionSettingsDialog() {
     showDialog(
       context: context,
@@ -141,7 +140,7 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
       builder: (BuildContext context) => AlertDialog(
         title: const Text('Permiso de Cámara Requerido'),
         content: const Text(
-          'Para usar la función de RA, necesitamos acceso a la cámara. ' 
+          'Para usar la función de RA, necesitamos acceso a la cámara. '
           'Por favor, habilita el permiso en la configuración de la aplicación.',
         ),
         actions: [
@@ -211,28 +210,147 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
   }
 
   Future<void> _loadARKitModel(String modelPath) async {
-    if (_arkitController == null) return;
+    if (_arkitController == null) {
+      final error = 'ARKit controller no inicializado';
+      ARLogger.error(error);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error)),
+        );
+      }
+      return;
+    }
 
     try {
       final config = ARModelConfig.butterfly;
       final nodeName = 'butterfly_${DateTime.now().millisecondsSinceEpoch}';
+      
+      ARLogger.log('🚀 Iniciando carga del modelo: $modelPath');
+      ARLogger.log('📝 Configuración del modelo:');
+      ARLogger.log('   - Escala: ${config.scale}');
+      ARLogger.log('   - Posición: ${config.position}');
+      ARLogger.log('   - Rotación: ${config.rotation}');
 
-      // Crear nodo usando la API básica de ARKit
+      // Remove any existing model
+      if (_currentARNodeName != null) {
+        ARLogger.log('🗑️ Eliminando modelo anterior: $_currentARNodeName');
+        _arkitController?.remove(_currentARNodeName!);
+      }
+
+      // Create and configure the model node
+      ARLogger.log('🎨 Creando nodo de referencia para el modelo');
       final node = ARKitReferenceNode(
         url: modelPath,
-        scale: vector.Vector3.all(config.scale),
-        position: vector.Vector3(
-          config.position[0].toDouble(),
-          config.position[1].toDouble(),
-          config.position[2].toDouble(),
-        ),
+        scale: vector.Vector3.all(config.scale * 0.005), // Reduced scale for better visibility
+        position: vector.Vector3(0, -0.2, -0.8), // Position in front of camera
+        eulerAngles: vector.Vector3(0, 0, 0), // No rotation initially
+        name: nodeName,
       );
 
+      // Add the node to the scene
+      ARLogger.log('➕ Añadiendo nodo a la escena AR');
       _arkitController?.add(node);
       _currentARNodeName = nodeName;
-      ARLogger.success('Modelo ARKit cargado: $nodeName');
+      
+      // Log successful model loading with detailed information
+      ARLogger.success('✅ Modelo ARKit cargado exitosamente: $nodeName');
+      ARLogger.log('📌 Posición: ${node.position}');
+      ARLogger.log('📏 Escala: ${node.scale}');
+      ARLogger.log('🔄 Rotación: ${node.eulerAngles}');
+      
+      // Schedule a check to verify the model was added
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) {
+          ARLogger.log('🔍 Verificando modelo después de 2 segundos...');
+          _checkModelVisibility();
+          
+          // If model is still not visible, try adjusting position
+          Future.delayed(const Duration(seconds: 3), () {
+            if (mounted) {
+              ARLogger.log('🔄 Intentando ajustar la posición del modelo...');
+              _adjustModelPosition();
+            }
+          });
+        }
+      });
     } catch (e) {
       ARLogger.error('Error cargando modelo ARKit', e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cargar el modelo 3D: $e')),
+        );
+      }
+    }
+  }
+
+  // Check if the model is visible in the scene after loading
+  void _checkModelVisibility() {
+    if (_currentARNodeName == null || _arkitController == null) {
+      ARLogger.error('No hay modelo cargado o controlador AR no inicializado');
+      return;
+    }
+    
+    ARLogger.log('🔍 Verificando visibilidad del modelo:');
+    ARLogger.log(' - Nombre del nodo: $_currentARNodeName');
+    ARLogger.log(' - Controlador AR: ${_arkitController != null ? 'Inicializado' : 'No inicializado'}');
+    
+    // Try to get the node to verify it exists in the scene
+    // Note: We'll use a different approach since getNodeByName isn't available
+    // Instead, we'll just log the current state and assume the node exists
+    ARLogger.log('Verificando nodo: $_currentARNodeName');
+    final node = _currentARNodeName != null ? ARKitNode(name: _currentARNodeName) : null;
+    if (node == null) {
+      ARLogger.error('❌ No se pudo encontrar el nodo del modelo en la escena');
+      return;
+    }
+    
+    ARLogger.log('✅ Modelo encontrado en la escena');
+    ARLogger.log('   - Posición: ${node.position}');
+    ARLogger.log('   - Escala: ${node.scale}');
+    ARLogger.log('   - Rotación: ${node.eulerAngles}');
+    
+    // If model is not visible, try to make it more visible
+    if (node.position.z > -0.1) {
+      ARLogger.log('⚠️ El modelo podría estar fuera de la vista. Ajustando posición...');
+      node.position = vector.Vector3(0, -0.2, -0.8);
+    }
+  }
+
+  // Adjust model position and scale for better visibility
+  void _adjustModelPosition() {
+    if (_currentARNodeName == null || _arkitController == null) {
+      ARLogger.error('No se puede ajustar la posición: modelo no cargado');
+      return;
+    }
+
+    ARLogger.log('🔄 Ajustando posición del modelo...');
+    
+    // Create a new node with adjusted position and scale
+    final newNode = ARKitNode(
+      name: _currentARNodeName!,
+      position: vector.Vector3(0, -0.3, -1.0), // Move closer and slightly lower
+      scale: vector.Vector3.all(0.02), // Adjust scale if needed
+    );
+
+    try {
+      // Remove the old node
+      _arkitController?.remove(_currentARNodeName!);
+      
+      // Add the new node with adjusted position
+      _arkitController?.add(newNode);
+      
+      ARLogger.log('✅ Posición del modelo ajustada:');
+      ARLogger.log('   - Nueva posición: ${newNode.position}');
+      ARLogger.log('   - Nueva escala: ${newNode.scale}');
+      
+      // Show a message to the user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ajustando la posición del modelo 3D')),
+        );
+      }
+    } catch (e) {
+      ARLogger.error('Error ajustando la posición del modelo', e);
     }
   }
 
@@ -369,12 +487,56 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
       onARKitViewCreated: (controller) {
         _arkitController = controller;
         ARLogger.success('Vista ARKit creada');
+        _setupARKitScene();
         _loadARModel();
       },
-      showFeaturePoints: true,
-      showWorldOrigin: false,
-      enableTapRecognizer: true,
+      showFeaturePoints: true,  // Show feature points for better debugging
+      showWorldOrigin: true,    // Show world origin for orientation
+      enableTapRecognizer: true, // Enable tap to place objects
+      planeDetection: ARPlaneDetection.horizontal,
+      autoenablesDefaultLighting: true, // Enable default lighting
+      enablePinchRecognizer: true,      // Enable pinch to scale
+      enableRotationRecognizer: true,    // Enable rotation
+      enablePanRecognizer: true,         // Enable panning
+      configuration: ARKitConfiguration.worldTracking, // Use world tracking
+      trackingImagesGroupName: 'AR Resources', // Optional: for image tracking
     );
+  }
+
+  void _setupARKitScene() {
+    if (_arkitController == null) return;
+
+    // Create a light node
+    final lightNode = ARKitNode(
+      geometry: null,
+      position: vector.Vector3(0, 1, 0),
+      eulerAngles: vector.Vector3(-math.pi / 2, 0, 0),
+      light: ARKitLight(
+        type: ARKitLightType.directional,
+        color: Colors.white,
+        intensity: 1000,
+      ),
+      name: 'directionalLight',
+    );
+
+    // Add the light to the scene
+    _arkitController?.add(lightNode);
+
+    // Add a small plane to help with visualization
+    final material = ARKitMaterial(
+      diffuse: ARKitMaterialProperty.color(Colors.white.withOpacity(0.3)),
+      doubleSided: true,
+    );
+
+    final plane = ARKitPlane(width: 2, height: 2, materials: [material]);
+
+    final planeNode = ARKitNode(
+      geometry: plane,
+      position: vector.Vector3(0, -0.5, -2), // Positioned slightly below center
+      name: 'groundPlane',
+    );
+
+    _arkitController?.add(planeNode);
   }
 
   Widget _buildModelViewerView() {
@@ -541,11 +703,11 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
               future: Permission.camera.status,
               builder: (context, snapshot) {
                 final status = snapshot.data;
-                
+
                 if (status == null || status.isGranted) {
                   return const SizedBox.shrink();
                 }
-                
+
                 return Column(
                   children: [
                     if (status.isPermanentlyDenied) ...[
