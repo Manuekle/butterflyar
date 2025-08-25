@@ -1,6 +1,7 @@
 // lib/screens/ar_experience_screen.dart
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart' as vector;
 
@@ -59,7 +60,25 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _initAudio();
+    _initAnimations();
+    
+    // Request camera permission when the screen initializes
+    _requestCameraPermission();
+    
+    // Preload the AR model when the screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadARModel();
+      }
+    });
+  }
 
+  void _initAudio() {
+    _audioPlayer ??= AudioPlayer();
+  }
+
+  void _initAnimations() {
     _slideController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -209,7 +228,7 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
     }
   }
 
-  Future<void> _loadARKitModel(String modelPath) async {
+  Future<void> _loadARKitModel([String? modelPath]) async {
     if (_arkitController == null) {
       final error = 'ARKit controller no inicializado';
       ARLogger.error(error);
@@ -220,43 +239,86 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
       }
       return;
     }
-
+    
+    ARLogger.log('🔍 Iniciando carga del modelo AR');
+    
+    // Use the provided model path or default to morpho.glb
+    final assetPath = modelPath ?? 'assets/models/morpho.glb';
+    ARLogger.log('📂 Usando ruta del modelo: $assetPath');
+    
     try {
-      final config = ARModelConfig.butterfly;
+      // Verify the asset exists in the pubspec.yaml
+      final assetManifest = await rootBundle.loadString('AssetManifest.json');
+      final Map<String, dynamic> manifestMap = json.decode(assetManifest);
+      
+      if (!manifestMap.containsKey(assetPath)) {
+        throw Exception('El archivo del modelo no se encuentra en el manifiesto de assets');
+      }
+      
+      ARLogger.log('✅ Modelo encontrado en assets');
+      
       final nodeName = 'butterfly_${DateTime.now().millisecondsSinceEpoch}';
       
-      ARLogger.log('🚀 Iniciando carga del modelo: $modelPath');
-      ARLogger.log('📝 Configuración del modelo:');
-      ARLogger.log('   - Escala: ${config.scale}');
-      ARLogger.log('   - Posición: ${config.position}');
-      ARLogger.log('   - Rotación: ${config.rotation}');
-
       // Remove any existing model
       if (_currentARNodeName != null) {
         ARLogger.log('🗑️ Eliminando modelo anterior: $_currentARNodeName');
         _arkitController?.remove(_currentARNodeName!);
       }
-
-      // Create and configure the model node
-      ARLogger.log('🎨 Creando nodo de referencia para el modelo');
+      
+      // Create a simple sphere first to test if basic 3D works
+      final testNode = ARKitNode(
+        geometry: ARKitBox(
+          width: 0.1,
+          height: 0.1,
+          length: 0.1,
+          materials: [ARKitMaterial(diffuse: ARKitMaterialProperty.color(Colors.blue))],
+        ),
+        position: vector.Vector3(0, 0, -0.5),
+        name: 'test_cube',
+      );
+      
+      _arkitController?.add(testNode);
+      ARLogger.log('✅ Added test cube to AR scene');
+      
+      // After 1 second, try loading the actual model
+      await Future.delayed(const Duration(seconds: 1));
+      
+      // Now try to load the actual model
+      ARLogger.log('🚀 Intentando cargar el modelo 3D: $assetPath');
+      
+      // First remove any existing model
+      if (_currentARNodeName != null) {
+        _arkitController?.remove(_currentARNodeName!);
+      }
+      
+      // Create the model node with proper configuration
       final node = ARKitReferenceNode(
-        url: modelPath,
-        scale: vector.Vector3.all(config.scale * 0.005), // Reduced scale for better visibility
-        position: vector.Vector3(0, -0.2, -0.8), // Position in front of camera
-        eulerAngles: vector.Vector3(0, 0, 0), // No rotation initially
+        url: assetPath,
+        scale: vector.Vector3.all(0.01), // Start with a small scale
+        position: vector.Vector3(0, -0.2, -0.7), // Position in front of camera
+        eulerAngles: vector.Vector3(0, 0, 0),
         name: nodeName,
       );
-
-      // Add the node to the scene
-      ARLogger.log('➕ Añadiendo nodo a la escena AR');
+      
+      // Add the model to the scene
       _arkitController?.add(node);
       _currentARNodeName = nodeName;
       
-      // Log successful model loading with detailed information
+      // Remove the test node
+      _arkitController?.remove('test_shape');
+      
+      // Add a small delay and then scale up for a nice effect
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted && _arkitController != null) {
+          // Scale up the model to a visible size
+          node.scale = vector.Vector3.all(0.05);
+          // Slightly rotate the model for better visibility
+          node.eulerAngles = vector.Vector3(0, -0.5, 0);
+          ARLogger.log('🔼 Modelo escalado y posicionado');
+        }
+      });
+      
       ARLogger.success('✅ Modelo ARKit cargado exitosamente: $nodeName');
-      ARLogger.log('📌 Posición: ${node.position}');
-      ARLogger.log('📏 Escala: ${node.scale}');
-      ARLogger.log('🔄 Rotación: ${node.eulerAngles}');
       
       // Schedule a check to verify the model was added
       Future.delayed(const Duration(seconds: 2), () {
@@ -487,56 +549,71 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
       onARKitViewCreated: (controller) {
         _arkitController = controller;
         ARLogger.success('Vista ARKit creada');
-        _setupARKitScene();
-        _loadARModel();
+        // Start with a simple shape to verify AR is working
+        _showTestShape();
       },
-      showFeaturePoints: true,  // Show feature points for better debugging
-      showWorldOrigin: true,    // Show world origin for orientation
-      enableTapRecognizer: true, // Enable tap to place objects
+      showFeaturePoints: true,
+      showWorldOrigin: true,
       planeDetection: ARPlaneDetection.horizontal,
-      autoenablesDefaultLighting: true, // Enable default lighting
-      enablePinchRecognizer: true,      // Enable pinch to scale
-      enableRotationRecognizer: true,    // Enable rotation
-      enablePanRecognizer: true,         // Enable panning
-      configuration: ARKitConfiguration.worldTracking, // Use world tracking
-      trackingImagesGroupName: 'AR Resources', // Optional: for image tracking
+      autoenablesDefaultLighting: true,
+      debug: true, // Show debug info
     );
   }
+  
+  Future<void> _requestCameraPermission() async {
+    final status = await Permission.camera.request();
+    if (status.isDenied) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Se requiere permiso de cámara para la experiencia AR')),
+        );
+      }
+    }
+  }
 
-  void _setupARKitScene() {
+  void _showTestShape() {
     if (_arkitController == null) return;
-
-    // Create a light node
-    final lightNode = ARKitNode(
-      geometry: null,
-      position: vector.Vector3(0, 1, 0),
-      eulerAngles: vector.Vector3(-math.pi / 2, 0, 0),
-      light: ARKitLight(
-        type: ARKitLightType.directional,
-        color: Colors.white,
-        intensity: 1000,
-      ),
-      name: 'directionalLight',
-    );
-
-    // Add the light to the scene
-    _arkitController?.add(lightNode);
-
-    // Add a small plane to help with visualization
-    final material = ARKitMaterial(
-      diffuse: ARKitMaterialProperty.color(Colors.white.withOpacity(0.3)),
-      doubleSided: true,
-    );
-
-    final plane = ARKitPlane(width: 2, height: 2, materials: [material]);
-
-    final planeNode = ARKitNode(
-      geometry: plane,
-      position: vector.Vector3(0, -0.5, -2), // Positioned slightly below center
-      name: 'groundPlane',
-    );
-
-    _arkitController?.add(planeNode);
+    
+    try {
+      // Clear any existing test nodes
+      _arkitController?.remove('test_shape');
+      
+      // Create a simple colored box to test AR
+      final material = ARKitMaterial(
+        diffuse: ARKitMaterialProperty.color(Colors.blue.withOpacity(0.5)),
+        lightingModelName: ARKitLightingModel.lambert,
+        doubleSided: true,
+      );
+      
+      final node = ARKitNode(
+        geometry: ARKitBox(
+          width: 0.1,
+          height: 0.1,
+          length: 0.1,
+          materials: [material],
+        ),
+        position: vector.Vector3(0, 0, -0.5), // 50cm in front of camera
+        eulerAngles: vector.Vector3.zero(),
+        name: 'test_shape',
+      );
+      
+      _arkitController?.add(node);
+      ARLogger.log('✅ Added test shape to AR scene');
+      
+      // After a short delay, try loading the actual model
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _loadARModel();
+        }
+      });
+    } catch (e) {
+      ARLogger.error('Error showing test shape', e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error al mostrar la forma de prueba')),
+        );
+      }
+    }
   }
 
   Widget _buildModelViewerView() {

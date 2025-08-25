@@ -52,7 +52,7 @@ flutter:
   assets:
     - assets/icon/favicon.png
     - assets/images/
-    - assets/models/
+    - assets/models/morpho.glb
     - assets/sounds/
     - assets/backgrounds/
     - lib/data/butterflies.json
