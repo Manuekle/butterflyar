@@ -1,0 +1,26 @@
+// App Configuration Settings
+#include "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
+
+// iOS Deployment Target
+IPHONEOS_DEPLOYMENT_TARGET = 11.0
+
+// Enable Bitcode
+ENABLE_BITCODE = NO
+
+// Other Configurations
+DEVELOPMENT_TEAM = YOUR_TEAM_ID
+PRODUCT_BUNDLE_IDENTIFIER = com.example.butterflyar
+PRODUCT_NAME = "$(TARGET_NAME)"
+
+// ARKit Framework
+LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/Frameworks
+OTHER_LDFLAGS = $(inherited) -framework "ARKit"
+
+// Swift Version
+SWIFT_VERSION = 5.0
+
+// Enable Modules
+CLANG_ENABLE_MODULES = YES
+
+// Enable Testability
+ENABLE_TESTABILITY = YES
