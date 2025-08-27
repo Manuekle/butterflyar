@@ -32,6 +32,8 @@ dependencies:
   lucide_icons_flutter: ^3.0.3
   url_launcher: ^6.3.2
   device_info_plus: ^11.1.0
+  image_gallery_saver: ^2.0.3
+  image: ^4.5.4
 
 dev_dependencies:
   flutter_test:

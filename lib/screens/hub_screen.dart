@@ -329,7 +329,7 @@ class _HubScreenState extends State<HubScreen>
                       subtitle,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         height: 1.4,
-                        fontSize: 10,
+                        fontSize: 12,
                       ),
                     ),
                   ],

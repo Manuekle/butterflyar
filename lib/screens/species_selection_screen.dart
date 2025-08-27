@@ -143,7 +143,7 @@ class _SpeciesSelectionScreenState extends State<SpeciesSelectionScreen>
           hintText: 'Buscar especie...',
           hintStyle: theme.textTheme.bodyLarge?.copyWith(
             color: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.5),
-            fontSize: 14,
+            fontSize: 16,
           ),
           prefixIcon: Icon(
             LucideIcons.search,

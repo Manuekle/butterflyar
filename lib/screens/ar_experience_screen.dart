@@ -2,13 +2,15 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:vector_math/vector_math_64.dart' as vector;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
 
 import 'package:arkit_plugin/arkit_plugin.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
@@ -195,28 +197,21 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
   void _startButterflyAnimations() {
     _stopAutoAnimations();
 
+    // Simplemente giramos el modelo lentamente
     _rotationTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (mounted && !_isModelSelected && _butterflyNode != null) {
-        _modelRotation += 0.05;
-        if (_modelRotation > 2 * math.pi) _modelRotation = 0;
-
-        final yRotation = math.sin(_modelRotation) * 0.3;
-        _butterflyNode?.eulerAngles = vector.Vector3(0, yRotation, 0);
+        _modelRotation += 0.005; // Rotación más lenta
+        _butterflyNode?.rotation = vector.Matrix3.rotationY(_modelRotation);
       }
     });
 
+    // La animación de flotación se puede simplificar
     _floatingTimer = Timer.periodic(const Duration(milliseconds: 80), (timer) {
       if (mounted && !_isModelSelected && _butterflyNode != null) {
-        _floatingOffset += 0.08;
-
-        final floatingY = math.sin(_floatingOffset) * 0.05;
-        final baseY = _planeDetected ? 0.1 : 0;
-
-        _butterflyNode?.position = vector.Vector3(
-          _butterflyNode!.position.x,
-          baseY + floatingY,
-          _butterflyNode!.position.z,
-        );
+        _floatingOffset += 0.05;
+        final floatingY =
+            math.sin(_floatingOffset) * 0.03; // Flotación más sutil
+        _butterflyNode?.position.y = floatingY;
       }
     });
   }
@@ -230,48 +225,114 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
 
   void _handleTap() {
     if (!_isARMode) return;
-    setState(() => _isModelSelected = !_isModelSelected);
-    HapticFeedback.lightImpact();
 
-    if (_isModelSelected) {
-      _stopAutoAnimations();
-      _highlightButterfly();
-    } else {
-      _startButterflyAnimations();
-      _removeHighlight();
+    // Si se ha colocado un modelo, permite seleccionarlo/deseleccionarlo
+    if (_isModelLoaded) {
+      setState(() => _isModelSelected = !_isModelSelected);
+      HapticFeedback.lightImpact();
+
+      if (_isModelSelected) {
+        _stopAutoAnimations();
+        _highlightButterfly();
+      } else {
+        _startButterflyAnimations();
+        _removeHighlight();
+      }
     }
   }
 
   void _highlightButterfly() {
     if (_butterflyNode != null) {
-      _butterflyNode?.scale = vector.Vector3.all(0.12);
+      // Aumenta el tamaño para indicar que está seleccionado
+      _butterflyNode?.scale = vector.Vector3.all(0.35);
     }
   }
 
   void _removeHighlight() {
     if (_butterflyNode != null) {
-      _butterflyNode?.scale = vector.Vector3.all(0.1);
+      // Vuelve al tamaño original
+      _butterflyNode?.scale = vector.Vector3.all(0.3);
     }
   }
 
   Future<void> _captureScreen() async {
     try {
-      HapticFeedback.lightImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(LucideIcons.camera, color: Colors.white),
-              const SizedBox(width: 8),
-              const Text('Captura AR guardada'),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
+      if (_arkitController == null) return;
+
+      // Mostrar retroalimentación táctil
+      HapticFeedback.mediumImpact();
+
+      // Mostrar mensaje de carga
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Capturando pantalla...')));
+      }
+
+      // Tomar la captura de pantalla
+      final imageProvider = await _arkitController?.snapshot();
+      if (imageProvider == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No se pudo capturar la imagen')),
+          );
+        }
+        return;
+      }
+
+      // Convertir ImageProvider a Uint8List
+      final image = await _imageProviderToUint8List(imageProvider);
+      if (image == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error al procesar la imagen')),
+          );
+        }
+        return;
+      }
+
+      // Solicitar permiso de almacenamiento si es necesario
+      if (Platform.isAndroid || Platform.isIOS) {
+        final status = await Permission.storage.request();
+        if (!status.isGranted) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Se necesita permiso para guardar la imagen'),
+              ),
+            );
+          }
+          return;
+        }
+      }
+
+      // Guardar la imagen en la galería
+      final result = await ImageGallerySaver.saveImage(
+        image,
+        quality: 100,
+        name: 'butterfly_ar_${DateTime.now().millisecondsSinceEpoch}.jpg',
       );
+
+      if (result['isSuccess'] == true) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('¡Foto guardada en la galería!')),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error al guardar la foto')),
+          );
+        }
+      }
     } catch (e) {
-      ARLogger.error('Error capturando pantalla', e);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      }
+      ARLogger.error('Error en _captureScreen', e);
     }
   }
 
@@ -307,10 +368,13 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
       onARKitViewCreated: (controller) {
         _arkitController = controller;
         ARLogger.success('Vista ARKit creada');
+        // Ahora usamos onAddNodeForAnchor para colocar el modelo automáticamente.
+        // Ya no se requiere un toque para colocarlo.
         controller.onAddNodeForAnchor = _onAddAnchor;
         controller.onUpdateNodeForAnchor = _onUpdateAnchor;
       },
-      showFeaturePoints: false,
+      showFeaturePoints:
+          true, // Útil para que el usuario sepa que el dispositivo está buscando un plano
       showWorldOrigin: false,
       planeDetection: ARPlaneDetection.horizontal,
       autoenablesDefaultLighting: true,
@@ -318,33 +382,30 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
     );
   }
 
+  // ==================== AR VIEW BUILDERS END ====================
+
+  // ==================== AR LOGIC ====================
+
   // LÓGICA PRINCIPAL: CARGAR EL MODELO CUANDO SE DETECTE EL PLANO
   void _onAddAnchor(ARKitAnchor anchor) {
-    if (anchor is ARKitPlaneAnchor && _butterflyNode == null) {
+    if (anchor is ARKitPlaneAnchor && !_isModelLoaded) {
       setState(() => _planeDetected = true);
       ARLogger.log('✅ Plano horizontal detectado');
 
-      if (selectedButterfly.modelAssetIOS == null ||
-          selectedButterfly.modelAssetIOS!.isEmpty) {
-        ARLogger.error('Ruta de modelo iOS no válida o vacía');
-        _showErrorSnackbar();
-        return;
-      }
+      // Usar una posición fija frente al usuario (0, 0, -0.5)
+      // Esto colocará el modelo medio metro frente a la cámara
+      final position = vector.Vector3(
+        0, // Centrado horizontalmente
+        -0.1, // Ligeramente por debajo del centro
+        -0.5, // 0.5 metros frente a la cámara
+      );
 
       final nodeName = 'butterfly_${DateTime.now().millisecondsSinceEpoch}';
-
-      // Crear un nodo que cargue el modelo 3D desde la carpeta de assets
       _butterflyNode = ARKitReferenceNode(
         url: selectedButterfly.modelAssetIOS!,
-        scale: vector.Vector3.all(0.1),
-        position: vector.Vector3(
-          anchor.center.x,
-          anchor.center.y +
-              0.1, // Un pequeño offset para que no quede justo en la superficie
-          anchor.center.z,
-        ),
-        eulerAngles: vector.Vector3(0, 0, 0),
+        scale: vector.Vector3.all(0.3),
         name: nodeName,
+        position: position,
       );
 
       _arkitController?.add(_butterflyNode!);
@@ -358,6 +419,8 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
   }
 
   void _onUpdateAnchor(ARKitAnchor anchor) {
+    // Esta función ahora solo actualiza la posición del modelo si es necesario,
+    // manteniéndolo en el centro del plano.
     if (anchor is ARKitPlaneAnchor && _butterflyNode != null) {
       _butterflyNode?.position = vector.Vector3(
         anchor.center.x,
@@ -858,6 +921,33 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
   }
 
   // ==================== LIFECYCLE ====================
+
+  // Convertir ImageProvider a Uint8List
+  Future<Uint8List?> _imageProviderToUint8List(
+    ImageProvider imageProvider,
+  ) async {
+    try {
+      final imageStream = imageProvider.resolve(ImageConfiguration.empty);
+      final completer = Completer<ui.Image>();
+
+      final listener = ImageStreamListener((ImageInfo info, bool _) {
+        completer.complete(info.image);
+      });
+
+      imageStream.addListener(listener);
+
+      try {
+        final image = await completer.future;
+        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+        return byteData?.buffer.asUint8List();
+      } finally {
+        imageStream.removeListener(listener);
+      }
+    } catch (e) {
+      debugPrint('Error converting image: $e');
+      return null;
+    }
+  }
 
   @override
   void dispose() {
