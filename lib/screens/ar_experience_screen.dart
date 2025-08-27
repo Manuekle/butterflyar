@@ -62,10 +62,10 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
     WidgetsBinding.instance.addObserver(this);
     _initAudio();
     _initAnimations();
-    
+
     // Request camera permission when the screen initializes
     _requestCameraPermission();
-    
+
     // Preload the AR model when the screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -233,64 +233,68 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
       final error = 'ARKit controller no inicializado';
       ARLogger.error(error);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
       }
       return;
     }
-    
+
     ARLogger.log('🔍 Iniciando carga del modelo AR');
-    
+
     // Use the provided model path or default to morpho.glb
-    final assetPath = modelPath ?? 'assets/models/morpho.glb';
+    final assetPath = modelPath ?? 'assets/models/morpho.usdz';
     ARLogger.log('📂 Usando ruta del modelo: $assetPath');
-    
+
     try {
       // Verify the asset exists in the pubspec.yaml
       final assetManifest = await rootBundle.loadString('AssetManifest.json');
       final Map<String, dynamic> manifestMap = json.decode(assetManifest);
-      
+
       if (!manifestMap.containsKey(assetPath)) {
-        throw Exception('El archivo del modelo no se encuentra en el manifiesto de assets');
+        throw Exception(
+          'El archivo del modelo no se encuentra en el manifiesto de assets',
+        );
       }
-      
+
       ARLogger.log('✅ Modelo encontrado en assets');
-      
+
       final nodeName = 'butterfly_${DateTime.now().millisecondsSinceEpoch}';
-      
+
       // Remove any existing model
       if (_currentARNodeName != null) {
         ARLogger.log('🗑️ Eliminando modelo anterior: $_currentARNodeName');
         _arkitController?.remove(_currentARNodeName!);
       }
-      
+
       // Create a simple sphere first to test if basic 3D works
       final testNode = ARKitNode(
         geometry: ARKitBox(
           width: 0.1,
           height: 0.1,
           length: 0.1,
-          materials: [ARKitMaterial(diffuse: ARKitMaterialProperty.color(Colors.blue))],
+          materials: [
+            ARKitMaterial(diffuse: ARKitMaterialProperty.color(Colors.blue)),
+          ],
         ),
         position: vector.Vector3(0, 0, -0.5),
         name: 'test_cube',
       );
-      
+
       _arkitController?.add(testNode);
       ARLogger.log('✅ Added test cube to AR scene');
-      
+
       // After 1 second, try loading the actual model
       await Future.delayed(const Duration(seconds: 1));
-      
+
       // Now try to load the actual model
       ARLogger.log('🚀 Intentando cargar el modelo 3D: $assetPath');
-      
+
       // First remove any existing model
       if (_currentARNodeName != null) {
         _arkitController?.remove(_currentARNodeName!);
       }
-      
+
       // Create the model node with proper configuration
       final node = ARKitReferenceNode(
         url: assetPath,
@@ -299,14 +303,14 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
         eulerAngles: vector.Vector3(0, 0, 0),
         name: nodeName,
       );
-      
+
       // Add the model to the scene
       _arkitController?.add(node);
       _currentARNodeName = nodeName;
-      
+
       // Remove the test node
       _arkitController?.remove('test_shape');
-      
+
       // Add a small delay and then scale up for a nice effect
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted && _arkitController != null) {
@@ -317,15 +321,15 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
           ARLogger.log('🔼 Modelo escalado y posicionado');
         }
       });
-      
+
       ARLogger.success('✅ Modelo ARKit cargado exitosamente: $nodeName');
-      
+
       // Schedule a check to verify the model was added
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           ARLogger.log('🔍 Verificando modelo después de 2 segundos...');
           _checkModelVisibility();
-          
+
           // If model is still not visible, try adjusting position
           Future.delayed(const Duration(seconds: 3), () {
             if (mounted) {
@@ -351,29 +355,35 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
       ARLogger.error('No hay modelo cargado o controlador AR no inicializado');
       return;
     }
-    
+
     ARLogger.log('🔍 Verificando visibilidad del modelo:');
     ARLogger.log(' - Nombre del nodo: $_currentARNodeName');
-    ARLogger.log(' - Controlador AR: ${_arkitController != null ? 'Inicializado' : 'No inicializado'}');
-    
+    ARLogger.log(
+      ' - Controlador AR: ${_arkitController != null ? 'Inicializado' : 'No inicializado'}',
+    );
+
     // Try to get the node to verify it exists in the scene
     // Note: We'll use a different approach since getNodeByName isn't available
     // Instead, we'll just log the current state and assume the node exists
     ARLogger.log('Verificando nodo: $_currentARNodeName');
-    final node = _currentARNodeName != null ? ARKitNode(name: _currentARNodeName) : null;
+    final node = _currentARNodeName != null
+        ? ARKitNode(name: _currentARNodeName)
+        : null;
     if (node == null) {
       ARLogger.error('❌ No se pudo encontrar el nodo del modelo en la escena');
       return;
     }
-    
+
     ARLogger.log('✅ Modelo encontrado en la escena');
     ARLogger.log('   - Posición: ${node.position}');
     ARLogger.log('   - Escala: ${node.scale}');
     ARLogger.log('   - Rotación: ${node.eulerAngles}');
-    
+
     // If model is not visible, try to make it more visible
     if (node.position.z > -0.1) {
-      ARLogger.log('⚠️ El modelo podría estar fuera de la vista. Ajustando posición...');
+      ARLogger.log(
+        '⚠️ El modelo podría estar fuera de la vista. Ajustando posición...',
+      );
       node.position = vector.Vector3(0, -0.2, -0.8);
     }
   }
@@ -386,7 +396,7 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
     }
 
     ARLogger.log('🔄 Ajustando posición del modelo...');
-    
+
     // Create a new node with adjusted position and scale
     final newNode = ARKitNode(
       name: _currentARNodeName!,
@@ -397,14 +407,14 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
     try {
       // Remove the old node
       _arkitController?.remove(_currentARNodeName!);
-      
+
       // Add the new node with adjusted position
       _arkitController?.add(newNode);
-      
+
       ARLogger.log('✅ Posición del modelo ajustada:');
       ARLogger.log('   - Nueva posición: ${newNode.position}');
       ARLogger.log('   - Nueva escala: ${newNode.scale}');
-      
+
       // Show a message to the user
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -559,13 +569,17 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
       debug: true, // Show debug info
     );
   }
-  
+
   Future<void> _requestCameraPermission() async {
     final status = await Permission.camera.request();
     if (status.isDenied) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Se requiere permiso de cámara para la experiencia AR')),
+          const SnackBar(
+            content: Text(
+              'Se requiere permiso de cámara para la experiencia AR',
+            ),
+          ),
         );
       }
     }
@@ -573,18 +587,18 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
 
   void _showTestShape() {
     if (_arkitController == null) return;
-    
+
     try {
       // Clear any existing test nodes
       _arkitController?.remove('test_shape');
-      
+
       // Create a simple colored box to test AR
       final material = ARKitMaterial(
         diffuse: ARKitMaterialProperty.color(Colors.blue.withOpacity(0.5)),
         lightingModelName: ARKitLightingModel.lambert,
         doubleSided: true,
       );
-      
+
       final node = ARKitNode(
         geometry: ARKitBox(
           width: 0.1,
@@ -596,10 +610,10 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
         eulerAngles: vector.Vector3.zero(),
         name: 'test_shape',
       );
-      
+
       _arkitController?.add(node);
       ARLogger.log('✅ Added test shape to AR scene');
-      
+
       // After a short delay, try loading the actual model
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
