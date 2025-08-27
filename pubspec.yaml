@@ -53,6 +53,7 @@ flutter:
     - assets/icon/favicon.png
     - assets/images/
     - assets/models/morpho.usdz
+    - assets/models/morpho.glb
     - assets/sounds/
     - assets/backgrounds/
     - lib/data/butterflies.json

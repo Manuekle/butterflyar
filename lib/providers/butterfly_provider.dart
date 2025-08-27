@@ -84,7 +84,10 @@ class ButterflyProvider with ChangeNotifier {
 
   // Obtener mariposas que tienen modelo 3D
   List<Butterfly> get butterfliesWithModels {
-    return _butterflies.where((b) => b.modelAsset?.isNotEmpty == true).toList();
+    return _butterflies.where((b) => 
+      (b.modelAssetAndroid?.isNotEmpty == true) || 
+      (b.modelAssetIOS?.isNotEmpty == true)
+    ).toList();
   }
 
   // Obtener mariposas que tienen sonido ambiente
@@ -111,7 +114,8 @@ class ButterflyProvider with ChangeNotifier {
     final butterfly = getButterflyById(id);
     if (butterfly == null) return false;
 
-    return butterfly.modelAsset?.isNotEmpty == true &&
+    return (butterfly.modelAssetAndroid?.isNotEmpty == true ||
+            butterfly.modelAssetIOS?.isNotEmpty == true) &&
         butterfly.imageAsset.isNotEmpty;
   }
 
@@ -123,7 +127,10 @@ class ButterflyProvider with ChangeNotifier {
       'withSound': butterfliesWithSound.length,
       'arReady': _butterflies
           .where(
-            (b) => b.modelAsset?.isNotEmpty == true && b.imageAsset.isNotEmpty,
+            (b) => 
+              (b.modelAssetAndroid?.isNotEmpty == true ||
+                  b.modelAssetIOS?.isNotEmpty == true) &&
+              b.imageAsset.isNotEmpty,
           )
           .length,
     };

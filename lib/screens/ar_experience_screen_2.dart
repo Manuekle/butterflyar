@@ -1,6 +1,7 @@
 // lib/screens/ar_experience_screen.dart
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart' as vector;
 
@@ -184,10 +185,40 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
 
   // ==================== AR MODEL LOADING ====================
 
-  // Esta función ahora solo es llamada para reintentar la carga.
-  // La carga inicial se hará cuando se detecte un plano.
   Future<void> _loadButterflyModel() async {
-    // La lógica de carga inicial se movió a _onAddAnchor
+    if (!mounted || _isModelLoaded || _arkitController == null) return;
+
+    final modelPath =
+        selectedButterfly.modelAssetAndroid ?? selectedButterfly.modelAssetIOS;
+    ARLogger.log('🦋 Cargando modelo de mariposa: $modelPath');
+
+    try {
+      if (_currentARNodeName != null) {
+        _arkitController?.remove(_currentARNodeName!);
+      }
+
+      final nodeName = 'butterfly_${DateTime.now().millisecondsSinceEpoch}';
+
+      _butterflyNode = ARKitReferenceNode(
+        url: modelPath!,
+        scale: vector.Vector3.all(0.1),
+        position: vector.Vector3(0, 0, -0.5),
+        eulerAngles: vector.Vector3(0, 0, 0),
+        name: nodeName,
+      );
+
+      _arkitController?.add(_butterflyNode!);
+      _currentARNodeName = nodeName;
+
+      setState(() => _isModelLoaded = true);
+      _startButterflyAnimations();
+
+      ARLogger.success('✅ Mariposa cargada exitosamente');
+      _showSuccessSnackbar();
+    } catch (e) {
+      ARLogger.error('Error cargando modelo de mariposa', e);
+      _showErrorSnackbar();
+    }
   }
 
   // ==================== ANIMATIONS ====================
@@ -283,7 +314,7 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
         backgroundColor: Colors.red,
         action: SnackBarAction(
           label: 'Reintentar',
-          onPressed: _isARMode ? () {} : () {},
+          onPressed: _isARMode ? _loadButterflyModel : () {},
         ),
       ),
     );
@@ -309,6 +340,11 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
         ARLogger.success('Vista ARKit creada');
         controller.onAddNodeForAnchor = _onAddAnchor;
         controller.onUpdateNodeForAnchor = _onUpdateAnchor;
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _loadButterflyModel();
+          }
+        });
       },
       showFeaturePoints: false,
       showWorldOrigin: false,
@@ -318,45 +354,17 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
     );
   }
 
-  // LÓGICA PRINCIPAL: CARGAR EL MODELO CUANDO SE DETECTE EL PLANO
   void _onAddAnchor(ARKitAnchor anchor) {
-    if (anchor is ARKitPlaneAnchor && _butterflyNode == null) {
+    if (anchor is ARKitPlaneAnchor) {
       setState(() => _planeDetected = true);
       ARLogger.log('✅ Plano horizontal detectado');
-
-      // Validar si la ruta de iOS es válida
-      if (selectedButterfly.modelAssetIOS == null ||
-          selectedButterfly.modelAssetIOS!.isEmpty) {
-        ARLogger.error('Ruta de modelo iOS no válida o vacía');
-        _showErrorSnackbar();
-        return;
-      }
-
-      // Validar la existencia del archivo en el Asset Catalog (iOS)
-      // Aunque el plugin gestiona la ruta, esta validación es útil.
-      final nodeName = 'butterfly_${DateTime.now().millisecondsSinceEpoch}';
-
-      // Creación y posicionamiento del nodo de la mariposa
-      _butterflyNode = ARKitReferenceNode(
-        url: selectedButterfly.modelAssetIOS!,
-        scale: vector.Vector3.all(0.1),
-        position: vector.Vector3(
+      if (_butterflyNode != null) {
+        _butterflyNode?.position = vector.Vector3(
           anchor.center.x,
-          anchor.center.y +
-              0.1, // Un pequeño offset para que no quede justo en la superficie
+          anchor.center.y + 0.1,
           anchor.center.z,
-        ),
-        eulerAngles: vector.Vector3(0, 0, 0),
-        name: nodeName,
-      );
-
-      _arkitController?.add(_butterflyNode!);
-      _currentARNodeName = nodeName;
-      setState(() => _isModelLoaded = true);
-      _startButterflyAnimations();
-
-      ARLogger.success('✅ Mariposa cargada y colocada exitosamente');
-      _showSuccessSnackbar();
+        );
+      }
     }
   }
 

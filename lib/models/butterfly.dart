@@ -4,7 +4,8 @@ class Butterfly {
   final String scientificName;
   final String description;
   final String imageAsset;
-  final String? modelAsset;
+  final String? modelAssetAndroid;
+  final String? modelAssetIOS;
   final String? ambientSound;
 
   Butterfly({
@@ -13,7 +14,8 @@ class Butterfly {
     required this.scientificName,
     required this.imageAsset,
     this.description = '',
-    this.modelAsset,
+    this.modelAssetAndroid,
+    this.modelAssetIOS,
     this.ambientSound,
   });
 
@@ -24,7 +26,8 @@ class Butterfly {
     String? scientificName,
     String? description,
     String? imageAsset,
-    String? modelAsset,
+    String? modelAssetAndroid,
+    String? modelAssetIOS,
     String? ambientSound,
   }) {
     return Butterfly(
@@ -33,7 +36,8 @@ class Butterfly {
       scientificName: scientificName ?? this.scientificName,
       description: description ?? this.description,
       imageAsset: imageAsset ?? this.imageAsset,
-      modelAsset: modelAsset ?? this.modelAsset,
+      modelAssetAndroid: modelAssetAndroid ?? this.modelAssetAndroid,
+      modelAssetIOS: modelAssetIOS ?? this.modelAssetIOS,
       ambientSound: ambientSound ?? this.ambientSound,
     );
   }
@@ -45,7 +49,8 @@ class Butterfly {
       'name': name,
       'scientificName': scientificName,
       'imageAsset': imageAsset,
-      'modelAsset': modelAsset,
+      'modelAssetAndroid': modelAssetAndroid,
+      'modelAssetIOS': modelAssetIOS,
       'ambientSound': ambientSound,
     };
   }
@@ -57,7 +62,8 @@ class Butterfly {
       name: json['name'] as String? ?? 'Unknown',
       scientificName: json['scientificName'] as String? ?? '',
       imageAsset: json['imageAsset'] as String? ?? '',
-      modelAsset: json['modelAsset'] as String?,
+      modelAssetAndroid: json['modelAssetAndroid'] as String?,
+      modelAssetIOS: json['modelAssetIOS'] as String?,
       ambientSound: json['ambientSound'] as String?,
     );
   }
