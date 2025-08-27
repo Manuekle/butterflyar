@@ -324,7 +324,6 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
       setState(() => _planeDetected = true);
       ARLogger.log('✅ Plano horizontal detectado');
 
-      // Validar si la ruta de iOS es válida
       if (selectedButterfly.modelAssetIOS == null ||
           selectedButterfly.modelAssetIOS!.isEmpty) {
         ARLogger.error('Ruta de modelo iOS no válida o vacía');
@@ -332,11 +331,9 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
         return;
       }
 
-      // Validar la existencia del archivo en el Asset Catalog (iOS)
-      // Aunque el plugin gestiona la ruta, esta validación es útil.
       final nodeName = 'butterfly_${DateTime.now().millisecondsSinceEpoch}';
 
-      // Creación y posicionamiento del nodo de la mariposa
+      // Crear un nodo que cargue el modelo 3D desde la carpeta de assets
       _butterflyNode = ARKitReferenceNode(
         url: selectedButterfly.modelAssetIOS!,
         scale: vector.Vector3.all(0.1),

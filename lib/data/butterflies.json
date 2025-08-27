@@ -6,8 +6,8 @@
       "scientificName": "Apatura iris",
       "description": "El Azul Real es una mariposa europea conocida por el brillo iridiscente de las alas del macho.",
       "imageAsset": "assets/images/azulreal.jpg",
-      "modelAssetAndroid": "assets/models/morpho.glb",
-      "modelAssetIOS": "models/morpho.usdz",
+      "modelAssetAndroid": "assets/models/azulreal.glb",
+      "modelAssetIOS": "models.scnassets/azulreal.scn",
       "ambientSound": "assets/sounds/ambiente.mp3"
     },
     {
@@ -16,8 +16,8 @@
       "scientificName": "Danaus plexippus",
       "description": "Conocida por su migración masiva y su patrón de colores naranja y negro.",
       "imageAsset": "assets/images/monarca.jpg",
-      "modelAssetAndroid": "assets/models/morpho.glb",
-      "modelAssetIOS": "models/morpho.usdz",
+      "modelAssetAndroid": "assets/models/monarca.glb",
+      "modelAssetIOS": "models.scnassets/monarca.scn",
       "ambientSound": "assets/sounds/ambiente.mp3"
     },
     {
@@ -27,7 +27,7 @@
       "description": "Famosa por su color azul metálico brillante en el dorso de las alas.",
       "imageAsset": "assets/images/morpho.jpg",
       "modelAssetAndroid": "assets/models/morpho.glb",
-      "modelAssetIOS": "models/morpho.usdz",
+      "modelAssetIOS": "models.scnassets/morpho.scn",
       "ambientSound": "assets/sounds/ambiente.mp3"
     }
   ]
