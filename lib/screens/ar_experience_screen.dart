@@ -371,7 +371,6 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
         // Ahora usamos onAddNodeForAnchor para colocar el modelo automáticamente.
         // Ya no se requiere un toque para colocarlo.
         controller.onAddNodeForAnchor = _onAddAnchor;
-        controller.onUpdateNodeForAnchor = _onUpdateAnchor;
       },
       showFeaturePoints:
           true, // Útil para que el usuario sepa que el dispositivo está buscando un plano
@@ -386,24 +385,19 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
 
   // ==================== AR LOGIC ====================
 
-  // LÓGICA PRINCIPAL: CARGAR EL MODELO CUANDO SE DETECTE EL PLANO
+  // ALTERNATIVA: COLOCAR EN EL PLANO DETECTADO
   void _onAddAnchor(ARKitAnchor anchor) {
     if (anchor is ARKitPlaneAnchor && !_isModelLoaded) {
       setState(() => _planeDetected = true);
       ARLogger.log('✅ Plano horizontal detectado');
 
-      // Usar una posición fija frente al usuario (0, 0, -0.5)
-      // Esto colocará el modelo medio metro frente a la cámara
-      final position = vector.Vector3(
-        0, // Centrado horizontalmente
-        -0.1, // Ligeramente por debajo del centro
-        -0.5, // 0.5 metros frente a la cámara
-      );
+      // Colocar en el centro del plano detectado, elevado ligeramente
+      final position = vector.Vector3(0, -1.2, -1.0);
 
       final nodeName = 'butterfly_${DateTime.now().millisecondsSinceEpoch}';
       _butterflyNode = ARKitReferenceNode(
         url: selectedButterfly.modelAssetIOS!,
-        scale: vector.Vector3.all(0.3),
+        scale: vector.Vector3.all(0.5),
         name: nodeName,
         position: position,
       );
@@ -412,21 +406,8 @@ class _ARExperienceScreenState extends State<ARExperienceScreen>
       _currentARNodeName = nodeName;
       setState(() => _isModelLoaded = true);
       _startButterflyAnimations();
-
       ARLogger.success('✅ Mariposa cargada y colocada exitosamente');
       _showSuccessSnackbar();
-    }
-  }
-
-  void _onUpdateAnchor(ARKitAnchor anchor) {
-    // Esta función ahora solo actualiza la posición del modelo si es necesario,
-    // manteniéndolo en el centro del plano.
-    if (anchor is ARKitPlaneAnchor && _butterflyNode != null) {
-      _butterflyNode?.position = vector.Vector3(
-        anchor.center.x,
-        anchor.center.y + 0.1,
-        anchor.center.z,
-      );
     }
   }
 
